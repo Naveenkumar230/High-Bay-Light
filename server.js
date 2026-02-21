@@ -12,9 +12,12 @@ const PORT = process.env.PORT || 3000;
 
 // ── ThingsBoard Config ──
 const TB_HOST      = process.env.TB_HOST      || 'https://thingsboard.cloud';
-const TB_EMAIL     = process.env.TB_EMAIL     || '';
-const TB_PASSWORD  = process.env.TB_PASSWORD  || '';
-const TB_DEVICE_ID = process.env.TB_DEVICE_ID || '';
+const TB_EMAIL     = process.env.TB_EMAIL     || 'naveenkumarak2002@gmail.com';
+const TB_PASSWORD  = process.env.TB_PASSWORD  || 'Naveen235623@@@';
+const TB_DEVICE_ID = process.env.TB_DEVICE_ID || '801f4020-0e45-11f1-b6d0-133d513d174e';
+
+// ── Render keep-alive URL (set this to your Render public URL) ──
+const RENDER_URL   = process.env.RENDER_URL   || '';
 
 // ── In-memory ──
 let jwtToken    = null;
@@ -69,15 +72,14 @@ async function tbGetStatus() {
   };
 }
 
-// Send server-side RPC to device via JWT — correct endpoint
+// Send server-side RPC to device via JWT
 async function tbSetLight(desired) {
-  const jwt = await getJWT();
-  // This is the correct server-side RPC endpoint
+  const jwt  = await getJWT();
   const url  = `${TB_HOST}/api/rpc/oneway/${TB_DEVICE_ID}`;
   const body = {
-    method: 'setLight',
-    params: { state: desired },
-    timeout: 5000,
+    method:     'setLight',
+    params:     { state: desired },
+    timeout:    5000,
     persistent: false
   };
   const r = await axios.post(url, body, {
@@ -111,7 +113,6 @@ app.post('/proxy/set', async (req, res) => {
   try {
     await tbSetLight(desired);
     console.log(`[SET] Light → ${desired ? 'ON' : 'OFF'}`);
-    // Wait for ESP32 to process and publish telemetry back
     await new Promise(r => setTimeout(r, 1500));
     const status = await tbGetStatus();
     cachedState  = status.state;
@@ -122,7 +123,7 @@ app.post('/proxy/set', async (req, res) => {
   }
 });
 
-// GET /health
+// GET /health — also used as keep-alive ping target
 app.get('/health', (req, res) => {
   res.json({
     server:    'online',
@@ -133,6 +134,21 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// ============================================================
+//  KEEP-ALIVE — self-ping every 10 minutes so Render never sleeps
+// ============================================================
+function keepAlive() {
+  if (!RENDER_URL) return; // only runs when RENDER_URL is set
+  setInterval(async () => {
+    try {
+      await axios.get(`${RENDER_URL}/health`, { timeout: 8000 });
+      console.log('[KEEP-ALIVE] Ping sent →', RENDER_URL);
+    } catch (e) {
+      console.warn('[KEEP-ALIVE] Ping failed:', e.message);
+    }
+  }, 10 * 60 * 1000); // every 10 minutes
+}
 
 // ============================================================
 //  START
@@ -147,5 +163,7 @@ app.listen(PORT, () => {
   console.log(`  Health  : http://localhost:${PORT}/health`);
   console.log(`\n  TB Host : ${TB_HOST}`);
   console.log(`  Device  : ${TB_DEVICE_ID || '⚠ NOT SET'}`);
-  console.log(`  Email   : ${TB_EMAIL     || '⚠ NOT SET'}\n`);
+  console.log(`  Email   : ${TB_EMAIL     || '⚠ NOT SET'}`);
+  console.log(`  Render  : ${RENDER_URL   || '⚠ NOT SET — add RENDER_URL to env'}\n`);
+  keepAlive(); // start self-ping
 });
