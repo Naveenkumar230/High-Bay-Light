@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "timestamp": "2026-02-21T06:38:38.226Z",
+    "type": "STATE_CHANGE",
+    "source": "server-bg-poll"
+  }
+]
