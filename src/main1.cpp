@@ -1,67 +1,24 @@
-/*
- * ============================================================
- *  AIPL High Bay Light Controller
- *  main1.cpp — ESP32 Hardware Layer v7.0
- *  PlatformIO | Arduino Framework
- *
- *  FULL WIRELESS OTA — 3 methods (NO USB cable ever needed):
- *
- *  METHOD 1 — Arduino IDE / PlatformIO OTA
- *    Upload directly from IDE over WiFi (same network)
- *    Hostname: ESP32-AIPL-Light.local
- *    Password: aipl@OTA#2025
- *
- *  METHOD 2 — Browser Web Upload (http://DEVICE_IP/ota)
- *    Open browser → go to device IP → /ota page
- *    Drag & drop or browse .bin file → click Flash
- *    Works from phone, tablet, any browser on same WiFi
- *    Password protected: username=admin password=aipl1234
- *
- *  METHOD 3 — Auto Update from URL (MQTT trigger)
- *    Send RPC command from ThingsBoard with a .bin URL
- *    Device downloads and flashes itself automatically
- *    {"method":"otaUpdate","params":{"url":"http://your-server/firmware.bin"}}
- *
- *  SAFETY FEATURES:
- *    - Relay turns OFF automatically before any OTA flash
- *    - Rollback protection (verifies flash before reboot)
- *    - OTA progress published to ThingsBoard in real-time
- *    - Failed OTA → device stays on old firmware, does NOT brick
- *    - Watchdog timer: auto-recovers from firmware crashes
- *    - WiFi auto-reconnect: never stays offline
- * ============================================================
- */
-
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
-#include <ArduinoOTA.h>
 #include <Preferences.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <Update.h>
-#include <HTTPClient.h>
-#include <esp_task_wdt.h>    // Watchdog timer
+#include <esp_task_wdt.h>
 
 // ============================================================
 //  USER CONFIG — EDIT BEFORE FIRST FLASH
 // ============================================================
-#define WIFI_SSID        "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD    "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID        "AIPL-IOT"
+#define WIFI_PASSWORD    "@ipl2027"
 
-// ThingsBoard
 // ThingsBoard
 #define TB_HOST          "mqtt.thingsboard.cloud"
 #define TB_PORT          1883
 #define TB_ACCESS_TOKEN  "J1R7Lw0dNx17T6HVifjX"
 
-// OTA passwords — change these to something private
-#define OTA_IDE_PASSWORD   "aipl@OTA#2025"     // Arduino IDE / PlatformIO OTA
-#define OTA_WEB_USER       "admin"              // Browser OTA page username
-#define OTA_WEB_PASSWORD   "aipl1234"           // Browser OTA page password
-
 // Firmware version — update this with every new flash so you can track it
-#define FIRMWARE_VERSION   "v7.1"
+#define FIRMWARE_VERSION   "v8.0"
 
 // ============================================================
 //  AP MODE (first-time WiFi config)
@@ -75,12 +32,11 @@ const IPAddress AP_SUB(255, 255, 255, 0);
 // ============================================================
 //  HARDWARE
 // ============================================================
-const char* OTA_HOSTNAME = "ESP32-AIPL-Light";
-const int   LIGHT_PIN    = 26;
-const int   RELAY_ON     = HIGH;
-const int   RELAY_OFF    = LOW;
-const float WATTAGE      = 150.0f;
-const float VOLTAGE      = 120.0f;
+const int   LIGHT_PIN  = 26;
+const int   RELAY_ON   = HIGH;
+const int   RELAY_OFF  = LOW;
+const float WATTAGE    = 150.0f;
+const float VOLTAGE    = 120.0f;
 
 // ============================================================
 //  MQTT TOPICS
@@ -93,16 +49,15 @@ const float VOLTAGE      = 120.0f;
 // ============================================================
 //  INTERVALS
 // ============================================================
-const unsigned long TELE_INTERVAL    = 5000;    // telemetry every 5s
-const unsigned long WIFI_CHECK_MS    = 15000;   // WiFi health check every 15s
-const unsigned long WDT_TIMEOUT_S    = 30;      // watchdog resets after 30s hang
+const unsigned long TELE_INTERVAL  = 5000;   // telemetry every 5s
+const unsigned long WIFI_CHECK_MS  = 15000;  // WiFi health check every 15s
+const unsigned long WDT_TIMEOUT_S  = 30;     // watchdog resets after 30s hang
 
 // ============================================================
 //  STATE
 // ============================================================
 bool          lightState      = false;
 bool          apMode          = true;
-bool          otaBusy         = false;   // true during any OTA flash
 
 Preferences   prefs;
 String        savedSSID       = "";
@@ -134,9 +89,6 @@ void          publishAttr(const char* key, String val);
 void          mqttCallback(char* topic, byte* payload, unsigned int len);
 void          mqttReconnect();
 void          setupMQTT();
-void          setupOTA_IDE();
-void          setupOTA_Web();
-void          doURLOTA(String url, String reqId);
 void          startAPMode();
 void          setupWebServer();
 void          checkWiFiHealth();
@@ -187,8 +139,7 @@ String getStatusJson() {
          ",\"rssi\":"        + String(WiFi.RSSI())      +
          ",\"ip\":\""        + WiFi.localIP().toString() + "\"" +
          ",\"mqtt\":"        + String(mqtt.connected() ? "true" : "false") +
-         ",\"firmware\":\""  + String(FIRMWARE_VERSION) + "\"" +
-         ",\"ota_busy\":"    + String(otaBusy ? "true" : "false") + "}";
+         ",\"firmware\":\""  + String(FIRMWARE_VERSION) + "\"}";
 }
 
 // ============================================================
@@ -196,7 +147,6 @@ String getStatusJson() {
 // ============================================================
 void setLightState(bool state) {
   if (lightState == state) return;
-  if (otaBusy) return;   // block during OTA flash
 
   if (lightState && !state && lightOnStart > 0) {
     totalOnSeconds += (millis() - lightOnStart) / 1000;
@@ -222,17 +172,16 @@ void setLightState(bool state) {
 void publishTelemetry() {
   if (!mqtt.connected()) return;
   StaticJsonDocument<300> doc;
-  doc["light_state"]    = lightState;
-  doc["on_seconds"]     = getOnSeconds();
-  doc["off_seconds"]    = getOffSeconds();
-  doc["kwh_used"]       = getKwh();
-  doc["rssi"]           = WiFi.RSSI();
-  doc["uptime_s"]       = (millis() - sessionStartMs) / 1000;
-  doc["wattage"]        = WATTAGE;
-  doc["voltage"]        = VOLTAGE;
-  doc["current_amps"]   = WATTAGE / VOLTAGE;
-  doc["firmware"]       = FIRMWARE_VERSION;
-  doc["ota_busy"]       = otaBusy;
+  doc["light_state"]  = lightState;
+  doc["on_seconds"]   = getOnSeconds();
+  doc["off_seconds"]  = getOffSeconds();
+  doc["kwh_used"]     = getKwh();
+  doc["rssi"]         = WiFi.RSSI();
+  doc["uptime_s"]     = (millis() - sessionStartMs) / 1000;
+  doc["wattage"]      = WATTAGE;
+  doc["voltage"]      = VOLTAGE;
+  doc["current_amps"] = WATTAGE / VOLTAGE;
+  doc["firmware"]     = FIRMWARE_VERSION;
   char buf[300];
   serializeJson(doc, buf);
   mqtt.publish(TOPIC_TELE, buf);
@@ -245,116 +194,7 @@ void publishAttr(const char* key, String val) {
 }
 
 // ============================================================
-//  METHOD 3 — URL-BASED OTA
-//  Called from MQTT RPC or web endpoint
-//  Downloads .bin from a URL and flashes it
-// ============================================================
-void doURLOTA(String url, String reqId) {
-  Serial.println("[OTA-URL] Starting download from: " + url);
-
-  // Notify ThingsBoard: OTA started
-  if (mqtt.connected()) {
-    String startMsg = "{\"ota_status\":\"DOWNLOADING\",\"url\":\"" + url + "\"}";
-    mqtt.publish(TOPIC_TELE, startMsg.c_str());
-  }
-
-  otaBusy = true;
-
-  // Safety: turn relay OFF before flashing
-  digitalWrite(LIGHT_PIN, RELAY_OFF);
-  delay(500);
-
-  HTTPClient http;
-  http.begin(url);
-  http.setTimeout(30000);   // 30s timeout for download
-
-  int httpCode = http.GET();
-  if (httpCode != HTTP_CODE_OK) {
-    Serial.printf("[OTA-URL] HTTP error: %d\n", httpCode);
-    if (mqtt.connected()) {
-      String fail = "{\"ota_status\":\"FAILED\",\"reason\":\"HTTP_" + String(httpCode) + "\"}";
-      mqtt.publish(TOPIC_TELE, fail.c_str());
-      if (reqId.length() > 0)
-        mqtt.publish((String(TOPIC_RPC_RES) + reqId).c_str(), "{\"ota\":\"failed\",\"reason\":\"http_error\"}");
-    }
-    http.end();
-    otaBusy = false;
-    // Restore relay to previous state
-    digitalWrite(LIGHT_PIN, lightState ? RELAY_ON : RELAY_OFF);
-    return;
-  }
-
-  int contentLen = http.getSize();
-  Serial.printf("[OTA-URL] Firmware size: %d bytes\n", contentLen);
-
-  if (!Update.begin(contentLen > 0 ? contentLen : UPDATE_SIZE_UNKNOWN)) {
-    Serial.println("[OTA-URL] Update.begin() failed");
-    Update.printError(Serial);
-    http.end();
-    otaBusy = false;
-    digitalWrite(LIGHT_PIN, lightState ? RELAY_ON : RELAY_OFF);
-    return;
-  }
-
-  WiFiClient* stream  = http.getStreamPtr();
-  size_t      written = 0;
-  uint8_t     buf[1024];
-  unsigned long lastProgress = 0;
-
-  // Stream firmware and write to flash
-  while (http.connected() && (written < (size_t)contentLen || contentLen < 0)) {
-    size_t avail = stream->available();
-    if (avail > 0) {
-      size_t toRead = min(avail, sizeof(buf));
-      size_t rd     = stream->readBytes(buf, toRead);
-      size_t wr     = Update.write(buf, rd);
-      written += wr;
-
-      // Report progress every 10%
-      int pct = contentLen > 0 ? (written * 100) / contentLen : 0;
-      if (pct != lastProgress && pct % 10 == 0) {
-        lastProgress = pct;
-        Serial.printf("[OTA-URL] Progress: %d%%\n", pct);
-        if (mqtt.connected()) {
-          String prog = "{\"ota_status\":\"FLASHING\",\"ota_progress\":" + String(pct) + "}";
-          mqtt.publish(TOPIC_TELE, prog.c_str());
-          mqtt.loop();
-        }
-        esp_task_wdt_reset();   // pet the watchdog during long flash
-      }
-    } else {
-      delay(1);
-    }
-  }
-
-  http.end();
-
-  if (Update.end(true)) {
-    Serial.println("[OTA-URL] Flash complete! Rebooting...");
-    if (mqtt.connected()) {
-      mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"COMPLETE\",\"ota_progress\":100}");
-      if (reqId.length() > 0)
-        mqtt.publish((String(TOPIC_RPC_RES) + reqId).c_str(), "{\"ota\":\"success\"}");
-      mqtt.loop();
-      delay(500);
-    }
-    delay(1000);
-    ESP.restart();
-  } else {
-    Serial.println("[OTA-URL] Flash FAILED");
-    Update.printError(Serial);
-    if (mqtt.connected()) {
-      mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"FAILED\",\"reason\":\"write_error\"}");
-      if (reqId.length() > 0)
-        mqtt.publish((String(TOPIC_RPC_RES) + reqId).c_str(), "{\"ota\":\"failed\",\"reason\":\"write_error\"}");
-    }
-    otaBusy = false;
-    digitalWrite(LIGHT_PIN, lightState ? RELAY_ON : RELAY_OFF);
-  }
-}
-
-// ============================================================
-//  MQTT CALLBACK — handles all RPC from ThingsBoard
+//  MQTT CALLBACK — handles RPC from ThingsBoard
 // ============================================================
 void mqttCallback(char* topic, byte* payload, unsigned int len) {
   String topicStr = String(topic);
@@ -373,9 +213,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
   if (method == "setLight") {
     bool desired = doc["params"]["state"] | false;
     setLightState(desired);
-    String resTopic = String(TOPIC_RPC_RES) + reqId;
-    mqtt.publish(resTopic.c_str(),
-      ("{\"state\":" + String(lightState ? "true" : "false") + "}").c_str());
+    mqtt.publish(
+      (String(TOPIC_RPC_RES) + reqId).c_str(),
+      ("{\"state\":" + String(lightState ? "true" : "false") + "}").c_str()
+    );
   }
 
   // ── getState ──
@@ -398,21 +239,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int len) {
     delay(500);
     ESP.restart();
   }
-
-  // ── otaUpdate ── (METHOD 3: URL-based OTA via ThingsBoard)
-  // Send from ThingsBoard:
-  // {"method":"otaUpdate","params":{"url":"http://192.168.1.50:8080/firmware.bin"}}
-  else if (method == "otaUpdate") {
-    String url = doc["params"]["url"] | "";
-    if (url.length() == 0) {
-      mqtt.publish((String(TOPIC_RPC_RES) + reqId).c_str(), "{\"error\":\"no url provided\"}");
-      return;
-    }
-    mqtt.publish((String(TOPIC_RPC_RES) + reqId).c_str(), "{\"ota\":\"starting\"}");
-    mqtt.loop();
-    delay(200);
-    doURLOTA(url, reqId);
-  }
 }
 
 // ============================================================
@@ -428,9 +254,8 @@ void mqttReconnect() {
     Serial.println(" OK");
     mqtt.subscribe(TOPIC_RPC_SUB);
     publishTelemetry();
-    publishAttr("firmware",  "\"" + String(FIRMWARE_VERSION) + "\"");
-    publishAttr("ip",        "\"" + WiFi.localIP().toString() + "\"");
-    publishAttr("ota_modes", "\"IDE+Web+URL\"");
+    publishAttr("firmware", "\"" + String(FIRMWARE_VERSION) + "\"");
+    publishAttr("ip",       "\"" + WiFi.localIP().toString() + "\"");
   } else {
     Serial.printf(" FAIL rc=%d\n", mqtt.state());
   }
@@ -441,66 +266,6 @@ void setupMQTT() {
   mqtt.setCallback(mqttCallback);
   mqtt.setBufferSize(1024);
   mqttReconnect();
-}
-
-// ============================================================
-//  METHOD 1 — ARDUINO IDE / PLATFORMIO OTA
-//  In PlatformIO: set upload_port = ESP32-AIPL-Light.local
-//  In Arduino IDE: Tools → Port → ESP32-AIPL-Light.local
-// ============================================================
-void setupOTA_IDE() {
-  ArduinoOTA.setHostname(OTA_HOSTNAME);
-  ArduinoOTA.setPassword(OTA_IDE_PASSWORD);
-
-  ArduinoOTA.onStart([]() {
-    String type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
-    Serial.println("[OTA-IDE] Start: " + type);
-    otaBusy = true;
-    // Safety: turn relay OFF
-    digitalWrite(LIGHT_PIN, RELAY_OFF);
-    if (mqtt.connected())
-      mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"IDE_UPLOADING\"}");
-  });
-
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\n[OTA-IDE] Complete!");
-    if (mqtt.connected())
-      mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"COMPLETE\",\"ota_progress\":100}");
-  });
-
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    int pct = progress / (total / 100);
-    Serial.printf("[OTA-IDE] %u%%\r", pct);
-    // Publish to ThingsBoard every 20%
-    static int lastPct = -1;
-    if (pct != lastPct && pct % 20 == 0) {
-      lastPct = pct;
-      if (mqtt.connected()) {
-        String p = "{\"ota_status\":\"IDE_UPLOADING\",\"ota_progress\":" + String(pct) + "}";
-        mqtt.publish(TOPIC_TELE, p.c_str());
-        mqtt.loop();
-      }
-    }
-    esp_task_wdt_reset();
-  });
-
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("[OTA-IDE] Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR)         Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR)   Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR)     Serial.println("End Failed");
-    otaBusy = false;
-    // Restore relay
-    digitalWrite(LIGHT_PIN, lightState ? RELAY_ON : RELAY_OFF);
-    if (mqtt.connected())
-      mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"FAILED\"}");
-  });
-
-  ArduinoOTA.begin();
-  Serial.println("[OTA-IDE] Ready — hostname: " + String(OTA_HOSTNAME) + ".local");
-  Serial.println("[OTA-IDE] Password: " + String(OTA_IDE_PASSWORD));
 }
 
 // ============================================================
@@ -540,267 +305,11 @@ void checkWiFiHealth() {
 }
 
 // ============================================================
-//  METHOD 2 — BROWSER WEB OTA PAGE
-//  Open: http://DEVICE_IP/ota
-//  Password protected — username: admin, password: aipl1234
-// ============================================================
-void setupOTA_Web() {
-
-  // ── /ota — web upload page ──
-  server.on("/ota", HTTP_GET, []() {
-    // Basic auth check
-    if (!server.authenticate(OTA_WEB_USER, OTA_WEB_PASSWORD)) {
-      return server.requestAuthentication();
-    }
-    server.send(200, "text/html", R"rawliteral(
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AIPL OTA Update</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',sans-serif;background:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:#1e293b;border-radius:20px;padding:36px;width:100%;max-width:440px;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  .logo{font-size:10px;letter-spacing:4px;color:#3b82f6;text-transform:uppercase;margin-bottom:6px;font-family:monospace}
-  h1{font-size:20px;color:#f1f5f9;margin-bottom:4px}
-  .sub{font-size:12px;color:#64748b;margin-bottom:28px}
-  .version{display:inline-block;background:#1d4ed8;color:#93c5fd;font-size:11px;font-family:monospace;padding:4px 10px;border-radius:6px;margin-bottom:20px}
-  .drop-zone{border:2px dashed #334155;border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;transition:.2s;position:relative;background:#0f172a}
-  .drop-zone:hover,.drop-zone.drag{border-color:#3b82f6;background:#1e3a5f}
-  .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-  .drop-icon{font-size:36px;margin-bottom:10px}
-  .drop-text{font-size:13px;color:#64748b}
-  .drop-text strong{color:#94a3b8;display:block;margin-top:4px;font-size:12px;font-family:monospace}
-  #fileInfo{margin-top:12px;font-size:12px;color:#3b82f6;font-family:monospace;min-height:18px}
-  .flash-btn{
-    width:100%;margin-top:16px;padding:14px;
-    background:linear-gradient(135deg,#1d4ed8,#3b82f6);
-    color:#fff;border:none;border-radius:12px;
-    font-size:15px;font-weight:700;cursor:pointer;transition:.2s;
-  }
-  .flash-btn:hover:not(:disabled){background:linear-gradient(135deg,#1e40af,#2563eb);transform:translateY(-1px)}
-  .flash-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-  .progress-wrap{margin-top:16px;display:none}
-  .progress-bar{height:8px;background:#1e293b;border:1px solid #334155;border-radius:4px;overflow:hidden}
-  .progress-fill{height:100%;background:linear-gradient(90deg,#1d4ed8,#3b82f6);border-radius:4px;width:0;transition:width .3s}
-  .progress-label{font-size:12px;color:#64748b;margin-top:6px;font-family:monospace;text-align:center}
-  .status{margin-top:14px;font-size:13px;text-align:center;font-family:monospace;min-height:20px}
-  .status.ok{color:#22c55e}
-  .status.err{color:#ef4444}
-  .status.info{color:#3b82f6}
-  .info-row{display:flex;gap:8px;margin-bottom:16px}
-  .info-chip{flex:1;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;text-align:center}
-  .info-chip .val{font-size:13px;font-weight:700;color:#3b82f6;font-family:monospace}
-  .info-chip .lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
-</style>
-</head>
-<body>
-<div class="card">
-  <div class="logo">AIPL Industrial</div>
-  <h1>Wireless OTA Update</h1>
-  <div class="sub">High Bay Controller — Browser Flash</div>
-
-  <div class="version" id="curVer">Current: ...)rawliteral" FIRMWARE_VERSION R"rawliteral(</div>
-
-  <div class="info-row">
-    <div class="info-chip">
-      <div class="val" id="chipIP">--</div>
-      <div class="lbl">Device IP</div>
-    </div>
-    <div class="info-chip">
-      <div class="val" id="chipRSSI">--</div>
-      <div class="lbl">WiFi Signal</div>
-    </div>
-  </div>
-
-  <div class="drop-zone" id="dropZone">
-    <input type="file" id="binFile" accept=".bin"/>
-    <div class="drop-icon">&#128190;</div>
-    <div class="drop-text">
-      Drop firmware .bin here or click to browse
-      <strong>Only .bin files from PlatformIO or Arduino IDE</strong>
-    </div>
-  </div>
-  <div id="fileInfo"></div>
-
-  <button class="flash-btn" id="flashBtn" disabled>&#9654;&nbsp; Flash Firmware</button>
-
-  <div class="progress-wrap" id="progWrap">
-    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <div class="progress-label" id="progLabel">0%</div>
-  </div>
-
-  <div class="status info" id="statusMsg">Select a .bin file to begin</div>
-</div>
-
-<script>
-const dz    = document.getElementById('dropZone');
-const fi    = document.getElementById('binFile');
-const info  = document.getElementById('fileInfo');
-const btn   = document.getElementById('flashBtn');
-const wrap  = document.getElementById('progWrap');
-const fill  = document.getElementById('progFill');
-const label = document.getElementById('progLabel');
-const msg   = document.getElementById('statusMsg');
-
-// Fetch current device info
-fetch('/api/status').then(r=>r.json()).then(d=>{
-  document.getElementById('chipIP').textContent   = d.ip   || location.hostname;
-  document.getElementById('chipRSSI').textContent = (d.rssi || '--') + ' dBm';
-}).catch(()=>{});
-
-// Drag & drop
-dz.addEventListener('dragover',  e=>{ e.preventDefault(); dz.classList.add('drag'); });
-dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
-dz.addEventListener('drop', e=>{
-  e.preventDefault(); dz.classList.remove('drag');
-  const f = e.dataTransfer.files[0];
-  if(f) handleFile(f);
-});
-fi.addEventListener('change', ()=>{ if(fi.files[0]) handleFile(fi.files[0]); });
-
-function handleFile(f) {
-  if (!f.name.endsWith('.bin')) {
-    msg.className='status err'; msg.textContent='Error: Only .bin files are allowed'; return;
-  }
-  info.textContent = '📦 ' + f.name + ' — ' + (f.size/1024).toFixed(1) + ' KB';
-  btn.disabled = false;
-  msg.className='status info'; msg.textContent='Ready to flash — click Flash Firmware';
-}
-
-btn.addEventListener('click', () => {
-  const f = fi.files[0] || null;
-  if (!f) { alert('Select a .bin file first'); return; }
-  if (!confirm('Flash ' + f.name + ' to device? Device will restart after.')) return;
-
-  btn.disabled = true;
-  wrap.style.display = 'block';
-  msg.className='status info'; msg.textContent='Uploading...';
-
-  const fd  = new FormData();
-  fd.append('firmware', f, f.name);
-
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/ota/upload');
-
-  xhr.upload.onprogress = e => {
-    if (e.lengthComputable) {
-      const pct = Math.round((e.loaded / e.total) * 100);
-      fill.style.width   = pct + '%';
-      label.textContent  = 'Uploading... ' + pct + '%';
-    }
-  };
-
-  xhr.onload = () => {
-    if (xhr.status === 200) {
-      fill.style.width  = '100%';
-      label.textContent = '100% — Done!';
-      msg.className='status ok';
-      msg.textContent = '✓ Flash complete! Device restarting in 3 seconds...';
-      setTimeout(()=>{ msg.textContent='Reloading page...'; setTimeout(()=>location.reload(),3000); }, 3000);
-    } else {
-      msg.className='status err';
-      msg.textContent = '✗ Flash failed: ' + xhr.responseText;
-      btn.disabled = false;
-    }
-  };
-
-  xhr.onerror = () => {
-    msg.className='status err';
-    msg.textContent = '✗ Connection error — check device is on same network';
-    btn.disabled = false;
-  };
-
-  xhr.send(fd);
-});
-</script>
-</body>
-</html>
-)rawliteral");
-  });
-
-  // ── /ota/upload — receives the .bin and flashes it ──
-  server.on("/ota/upload", HTTP_POST,
-    // Response handler (after upload finishes)
-    []() {
-      if (!server.authenticate(OTA_WEB_USER, OTA_WEB_PASSWORD)) {
-        return server.requestAuthentication();
-      }
-      if (Update.hasError()) {
-        String err = Update.errorString();
-        server.send(500, "text/plain", "Flash FAILED: " + err);
-        Serial.println("[OTA-Web] FAILED: " + err);
-        otaBusy = false;
-        digitalWrite(LIGHT_PIN, lightState ? RELAY_ON : RELAY_OFF);
-        if (mqtt.connected())
-          mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"FAILED\"}");
-      } else {
-        server.send(200, "text/plain", "OK");
-        Serial.println("[OTA-Web] Flash complete — restarting...");
-        if (mqtt.connected()) {
-          mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"COMPLETE\",\"ota_progress\":100}");
-          mqtt.loop();
-        }
-        delay(1000);
-        ESP.restart();
-      }
-    },
-    // Upload handler (chunk by chunk)
-    []() {
-      if (!server.authenticate(OTA_WEB_USER, OTA_WEB_PASSWORD)) {
-        return server.requestAuthentication();
-      }
-      HTTPUpload& upload = server.upload();
-
-      if (upload.status == UPLOAD_FILE_START) {
-        Serial.printf("[OTA-Web] Start: %s\n", upload.filename.c_str());
-        otaBusy = true;
-        // Safety: turn relay OFF before flash
-        digitalWrite(LIGHT_PIN, RELAY_OFF);
-        if (mqtt.connected())
-          mqtt.publish(TOPIC_TELE, "{\"ota_status\":\"WEB_UPLOADING\",\"ota_progress\":0}");
-        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
-          Update.printError(Serial);
-        }
-      }
-      else if (upload.status == UPLOAD_FILE_WRITE) {
-        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
-          Update.printError(Serial);
-        }
-        // Progress
-        if (upload.totalSize > 0) {
-          int pct = (upload.totalSize * 100) / (upload.totalSize + 1);
-          static int lastPct2 = -1;
-          if (pct != lastPct2 && pct % 20 == 0) {
-            lastPct2 = pct;
-            if (mqtt.connected()) {
-              String prog = "{\"ota_status\":\"WEB_UPLOADING\",\"ota_progress\":" + String(pct) + "}";
-              mqtt.publish(TOPIC_TELE, prog.c_str());
-              mqtt.loop();
-            }
-          }
-        }
-        esp_task_wdt_reset();
-      }
-      else if (upload.status == UPLOAD_FILE_END) {
-        if (Update.end(true)) {
-          Serial.printf("[OTA-Web] Uploaded %u bytes\n", upload.totalSize);
-        } else {
-          Update.printError(Serial);
-        }
-      }
-    }
-  );
-}
-
-// ============================================================
 //  WEB SERVER — all routes
 // ============================================================
 void setupWebServer() {
 
-  // AP config page
+  // AP config page / status JSON
   server.on("/", HTTP_GET, []() {
     if (apMode) {
       server.send(200, "text/html",
@@ -822,7 +331,7 @@ void setupWebServer() {
     }
   });
 
-  // Save WiFi
+  // Save WiFi credentials and restart
   server.on("/save", HTTP_POST, []() {
     String s = server.arg("ssid");
     String p = server.arg("password");
@@ -837,56 +346,31 @@ void setupWebServer() {
     ESP.restart();
   });
 
-  // /api/set?state=1 or 0
+  // POST /api/set?state=1 or 0
   server.on("/api/set", HTTP_POST, []() {
     if (apMode) { server.send(403, "application/json", "{\"error\":\"AP mode\"}"); return; }
-    if (otaBusy) { server.send(503, "application/json", "{\"error\":\"OTA in progress\"}"); return; }
     setLightState(server.arg("state") == "1");
     server.send(200, "application/json", getStatusJson());
   });
 
-  // /api/status
+  // GET /api/status
   server.on("/api/status", HTTP_GET, []() {
     if (apMode) { server.send(403, "application/json", "{\"error\":\"AP mode\"}"); return; }
     server.send(200, "application/json", getStatusJson());
   });
 
-  // /api/ota-url — trigger URL OTA via REST (alternative to MQTT)
-  // POST body: {"url":"http://your-server/firmware.bin"}
-  server.on("/api/ota-url", HTTP_POST, []() {
-    if (apMode) { server.send(403, "application/json", "{\"error\":\"AP mode\"}"); return; }
-    if (!server.authenticate(OTA_WEB_USER, OTA_WEB_PASSWORD)) {
-      return server.requestAuthentication();
-    }
-    String body = server.arg("plain");
-    StaticJsonDocument<256> doc;
-    if (deserializeJson(doc, body)) {
-      server.send(400, "application/json", "{\"error\":\"invalid json\"}"); return;
-    }
-    String url = doc["url"] | "";
-    if (url.length() == 0) {
-      server.send(400, "application/json", "{\"error\":\"url required\"}"); return;
-    }
-    server.send(200, "application/json", "{\"ota\":\"starting\",\"url\":\"" + url + "\"}");
-    delay(100);
-    doURLOTA(url, "");
-  });
-
-  // /reset WiFi
+  // GET /reset — clear WiFi config and restart
   server.on("/reset", HTTP_GET, []() {
     prefs.begin("wifi", false); prefs.clear(); prefs.end();
     server.send(200, "text/plain", "WiFi config cleared. Restarting...");
     delay(1000); ESP.restart();
   });
 
-  // /restart — soft reboot via browser
+  // GET /restart — soft reboot
   server.on("/restart", HTTP_GET, []() {
     server.send(200, "text/plain", "Restarting...");
     delay(500); ESP.restart();
   });
-
-  // Register OTA web upload routes
-  setupOTA_Web();
 }
 
 // ============================================================
@@ -896,11 +380,11 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("\n╔═══════════════════════════════════════╗");
-  Serial.println("║  AIPL High Bay Controller v7.0        ║");
-  Serial.println("║  3x Wireless OTA — No USB ever needed ║");
+  Serial.println("║  AIPL High Bay Controller " FIRMWARE_VERSION "         ║");
+  Serial.println("║  MQTT + WiFi AP Setup                 ║");
   Serial.println("╚═══════════════════════════════════════╝\n");
 
-  // ── Watchdog — resets ESP if loop hangs > 30s ──
+  // Watchdog — resets ESP if loop hangs > 30s
   esp_task_wdt_init(WDT_TIMEOUT_S, true);
   esp_task_wdt_add(NULL);
 
@@ -912,11 +396,11 @@ void setup() {
   digitalWrite(LIGHT_PIN, lightState ? RELAY_ON : RELAY_OFF);
   Serial.printf("[GPIO] Pin %d = %s\n", LIGHT_PIN, lightState ? "ON" : "OFF");
 
-  // Restore ON time
+  // Restore ON time accumulator
   totalOnSeconds = loadOnTime();
   if (lightState) lightOnStart = millis();
 
-  // Load WiFi credentials
+  // Load WiFi credentials (fallback to compile-time defines)
   prefs.begin("wifi", false);
   savedSSID = prefs.getString("ssid", WIFI_SSID);
   savedPass = prefs.getString("password", WIFI_PASSWORD);
@@ -937,14 +421,6 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
       apMode = false;
       Serial.println("[WiFi] Connected! IP: " + WiFi.localIP().toString());
-      Serial.println("\n┌─ OTA METHODS ─────────────────────────────┐");
-      Serial.println("│ 1. IDE/PlatformIO → " + String(OTA_HOSTNAME) + ".local");
-      Serial.println("│    Password: " + String(OTA_IDE_PASSWORD));
-      Serial.println("│ 2. Browser → http://" + WiFi.localIP().toString() + "/ota");
-      Serial.println("│    Login: " + String(OTA_WEB_USER) + " / " + String(OTA_WEB_PASSWORD));
-      Serial.println("│ 3. MQTT RPC → method: otaUpdate, params: {url:...}");
-      Serial.println("└───────────────────────────────────────────┘\n");
-      setupOTA_IDE();
       setupMQTT();
     } else {
       Serial.println("[WiFi] Failed — starting AP mode");
@@ -964,14 +440,12 @@ void setup() {
 //  LOOP
 // ============================================================
 void loop() {
-  esp_task_wdt_reset();   // pet the watchdog every loop
+  esp_task_wdt_reset();
 
   server.handleClient();
   checkWiFiHealth();
 
   if (!apMode) {
-    ArduinoOTA.handle();   // handles Method 1 IDE OTA
-
     if (!mqtt.connected()) mqttReconnect();
     mqtt.loop();
 

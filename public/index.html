@@ -4,135 +4,48 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>AIPL · High Bay Controller</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-<header>
-  <div class="brand">
-    AIPL Industrial
-    <span>High Bay Controller</span>
-  </div>
-  <div class="conn-pill disconnected" id="connPill">
-    <div class="conn-dot"></div>
-    <span id="connLabel">OFFLINE</span>
-  </div>
-</header>
+  <div class="scene">
 
-<main>
-
-  <!-- TOP ROW -->
-  <div class="top-row">
-
-    <!-- High Bay Fixture -->
-    <div class="light-card">
-      <div class="ceiling-bar"></div>
-      <div class="hb-wrap">
-        <div class="hb-body"></div>
-        <div class="hb-fins">
-          <div class="hb-fin"></div><div class="hb-fin"></div>
-          <div class="hb-fin"></div><div class="hb-fin"></div>
-          <div class="hb-fin"></div><div class="hb-fin"></div>
-          <div class="hb-fin"></div><div class="hb-fin"></div>
+    <!-- Fixture -->
+    <div class="fixture-wrap">
+      <div class="ceiling-pipe"></div>
+      <div class="fixture">
+        <div class="fixture-top"></div>
+        <div class="fins">
+          <div class="fin"></div><div class="fin"></div><div class="fin"></div>
+          <div class="fin"></div><div class="fin"></div><div class="fin"></div>
+          <div class="fin"></div><div class="fin"></div><div class="fin"></div>
         </div>
-        <div class="hb-dome">
-          <div class="hb-lens off" id="lens"></div>
+        <div class="dome">
+          <div class="lens" id="lens"></div>
         </div>
       </div>
       <div class="beam" id="beam"></div>
       <div class="floor-glow" id="floorGlow"></div>
-      <div class="light-info">
-        <div class="light-channel">High Bay — Channel 01</div>
-        <div class="light-state-lbl off" id="stateLabel">OFF</div>
-        <div class="light-spec-lbl">150W &nbsp;·&nbsp; 120V &nbsp;·&nbsp; Industrial</div>
-      </div>
     </div>
 
-    <!-- Controls -->
-    <div class="card ctrl-panel">
-      <div class="card-title">Light Control</div>
-      <div class="btn-group">
-        <button class="ctrl-btn btn-on" id="btnOn">&#9654;&nbsp; Turn ON</button>
-        <button class="ctrl-btn btn-off active-state" id="btnOff">&#9632;&nbsp; Turn OFF</button>
+    <!-- Card -->
+    <div class="card">
+      <div class="label">CHANNEL 01</div>
+      <div class="state-txt" id="stateTxt">OFF</div>
+
+      <div class="btn-row">
+        <button class="btn btn-on"  id="btnOn">ON</button>
+        <button class="btn btn-off" id="btnOff">OFF</button>
       </div>
-      <div class="info-badges">
-        <div class="badge">&#128246; <span id="rssiVal">-- dBm</span></div>
-        <div class="badge">&#9201; ON: <span id="timeOnBadge">0h 00m</span></div>
+
+      <div class="status-row">
+        <div class="dot" id="dot"></div>
+        <span id="statusMsg">Ready</span>
       </div>
     </div>
 
   </div>
-
-  <!-- POWER CONSUMPTION -->
-  <div class="card">
-    <div class="card-title">Power Consumption &nbsp;·&nbsp; 150W @ 120V</div>
-    <div class="power-grid">
-      <div class="power-item">
-        <div class="power-icon">&#128161;</div>
-        <div class="power-val">150 W</div>
-        <div class="power-lbl">Rated Power</div>
-      </div>
-      <div class="power-item">
-        <div class="power-icon">&#9889;</div>
-        <div class="power-val">1.25 A</div>
-        <div class="power-lbl">Current Draw</div>
-      </div>
-      <div class="power-item">
-        <div class="power-icon">&#128200;</div>
-        <div class="power-val" id="kwhVal">0.000</div>
-        <div class="power-lbl">kWh Used</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ON / OFF DONUT -->
-  <div class="card">
-    <div class="card-title">ON / OFF Time &nbsp;·&nbsp; Session</div>
-    <div class="chart-wrap">
-      <canvas id="donut" width="180" height="180"></canvas>
-      <div class="legend">
-        <div class="leg-row">
-          <div class="leg-dot on-dot"></div>
-          <div>
-            <div class="leg-lbl">Light ON</div>
-            <div class="leg-val" id="legOn">0h 00m 00s</div>
-          </div>
-        </div>
-        <div class="leg-row">
-          <div class="leg-dot off-dot"></div>
-          <div>
-            <div class="leg-lbl">Light OFF</div>
-            <div class="leg-val" id="legOff">0h 00m 00s</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CONNECTION SETTINGS -->
-  <div class="card">
-    <div class="card-title">Connection Settings</div>
-    <div class="config-grid">
-      <div class="cfg-field">
-        <label>ESP32 IP Address</label>
-        <input id="cfgIP" type="text" placeholder="192.168.1.100"/>
-      </div>
-      <div class="cfg-field">
-        <label>Server Mode</label>
-        <input id="cfgMode" type="text" value="Direct LAN + ThingsBoard MQTT" readonly/>
-      </div>
-    </div>
-    <div class="cfg-btn-row">
-      <button class="cfg-save-btn" id="cfgSaveBtn">&#10003; Save &amp; Connect</button>
-      <button class="cfg-reset-btn" id="cfgResetBtn">&#8635; Reset Device WiFi</button>
-    </div>
-    <div id="cfgStatus"></div>
-  </div>
-
-</main>
-
-<footer>ESP32 &nbsp;·&nbsp; AIPL High Bay Controller v6.0 &nbsp;|&nbsp; &copy; 2025 AIPL Industrial</footer>
 
 <script src="app.js"></script>
 </body>
