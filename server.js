@@ -11,10 +11,15 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // ── ThingsBoard Config ──
-const TB_HOST  = process.env.TB_HOST  || 'https://thingsboard.cloud';
-const TB_TOKEN = process.env.TB_TOKEN || 'J1R7Lw0dNx17T6HVifjX';
+const TB_HOST      = process.env.TB_HOST      || 'https://thingsboard.cloud';
+const TB_TOKEN     = process.env.TB_TOKEN     || 'J1R7Lw0dNx17T6HVifjX'; // device token
+const TB_EMAIL     = process.env.TB_EMAIL     || '';  // your ThingsBoard login email
+const TB_PASSWORD  = process.env.TB_PASSWORD  || '';  // your ThingsBoard login password
+const TB_DEVICE_ID = process.env.TB_DEVICE_ID || '';  // device ID from ThingsBoard
 
-// ── In-memory state cache ──
+// ── In-memory ──
+let jwtToken    = null;
+let jwtExpiry   = 0;
 let cachedState = null;
 
 // ============================================================
@@ -23,35 +28,37 @@ let cachedState = null;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve frontend from public/
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
-//  HELPERS — ThingsBoard REST API
+//  JWT LOGIN — get ThingsBoard user token
 // ============================================================
-
-// Send RPC command to ESP32 via ThingsBoard
-async function tbSetLight(desired) {
-  const url = `${TB_HOST}/api/v1/${TB_TOKEN}/rpc`;
-  const body = {
-    method: 'setLight',
-    params: { state: desired },
-    timeout: 5000
-  };
-  const r = await axios.post(url, body, { timeout: 8000 });
-  return r.data; // ThingsBoard returns the ESP32 RPC response
+async function getJWT() {
+  if (jwtToken && Date.now() < jwtExpiry) return jwtToken;
+  const r = await axios.post(`${TB_HOST}/api/auth/login`, {
+    username: TB_EMAIL,
+    password: TB_PASSWORD
+  }, { timeout: 8000 });
+  jwtToken  = r.data.token;
+  jwtExpiry = Date.now() + 50 * 60 * 1000; // refresh every 50 min
+  console.log('[JWT] Token refreshed');
+  return jwtToken;
 }
 
-// Get latest telemetry from ThingsBoard
+// ============================================================
+//  THINGSBOARD HELPERS
+// ============================================================
+
+// Read latest telemetry via JWT
 async function tbGetStatus() {
-  const url = `${TB_HOST}/api/v1/${TB_TOKEN}/telemetry?keys=light_state,rssi,kwh_used,on_seconds,off_seconds,firmware`;
-  const r = await axios.get(url, { timeout: 8000 });
-  const d = r.data;
-
-  // ThingsBoard returns { key: [{ts, value}] } — extract latest values
+  const jwt = await getJWT();
+  const url = `${TB_HOST}/api/plugins/telemetry/DEVICE/${TB_DEVICE_ID}/values/timeseries?keys=light_state,rssi,kwh_used,on_seconds,off_seconds,firmware`;
+  const r   = await axios.get(url, {
+    headers: { 'X-Authorization': `Bearer ${jwt}` },
+    timeout: 8000
+  });
+  const d   = r.data;
   const get = (key) => d[key]?.[0]?.value;
-
   return {
     state:       get('light_state') === true || get('light_state') === 'true',
     rssi:        get('rssi')        ?? '--',
@@ -63,11 +70,19 @@ async function tbGetStatus() {
   };
 }
 
+// Send RPC to ESP32 via ThingsBoard device token
+async function tbSetLight(desired) {
+  const url  = `${TB_HOST}/api/v1/${TB_TOKEN}/rpc`;
+  const body = { method: 'setLight', params: { state: desired } };
+  const r    = await axios.post(url, body, { timeout: 10000 });
+  return r.data;
+}
+
 // ============================================================
 //  ROUTES
 // ============================================================
 
-// GET /proxy/status — returns light state from ThingsBoard telemetry
+// GET /proxy/status
 app.get('/proxy/status', async (req, res) => {
   try {
     const status = await tbGetStatus();
@@ -79,20 +94,16 @@ app.get('/proxy/status', async (req, res) => {
   }
 });
 
-// POST /proxy/set?state=1 or 0 — sends RPC to ESP32 via ThingsBoard
+// POST /proxy/set?state=1 or 0
 app.post('/proxy/set', async (req, res) => {
   const sv = req.query.state ?? req.body.state;
   if (sv === undefined) return res.status(400).json({ error: 'state param required' });
-
   const desired = sv === '1' || sv === true || sv === 'true';
-
   try {
-    const rpcResp = await tbSetLight(desired);
-    cachedState   = rpcResp?.state ?? desired;
-
-    // Small delay then fetch fresh telemetry to confirm
-    await new Promise(r => setTimeout(r, 800));
+    await tbSetLight(desired);
+    await new Promise(r => setTimeout(r, 1000));
     const status = await tbGetStatus();
+    cachedState  = status.state;
     res.json(status);
   } catch (e) {
     console.error('[SET] Error:', e.message);
@@ -103,11 +114,11 @@ app.post('/proxy/set', async (req, res) => {
 // GET /health
 app.get('/health', (req, res) => {
   res.json({
-    server:     'online',
-    tb_host:    TB_HOST,
-    uptime_s:   Math.floor(process.uptime()),
-    lastState:  cachedState,
-    timestamp:  new Date().toISOString()
+    server:    'online',
+    tb_host:   TB_HOST,
+    uptime_s:  Math.floor(process.uptime()),
+    lastState: cachedState,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -123,5 +134,6 @@ app.listen(PORT, () => {
   console.log(`  Set ON  : POST http://localhost:${PORT}/proxy/set?state=1`);
   console.log(`  Health  : http://localhost:${PORT}/health`);
   console.log(`\n  TB Host : ${TB_HOST}`);
-  console.log(`  Token   : ${TB_TOKEN.slice(0, 6)}...****\n`);
+  console.log(`  Device  : ${TB_DEVICE_ID || '⚠ NOT SET — add TB_DEVICE_ID to .env'}`);
+  console.log(`  Email   : ${TB_EMAIL     || '⚠ NOT SET — add TB_EMAIL to .env'}\n`);
 });
