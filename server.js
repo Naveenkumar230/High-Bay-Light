@@ -6,7 +6,7 @@ const express = require('express');
 const axios   = require('axios');
 const cors    = require('cors');
 const path    = require('path');
-
+const axios = require('axios');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -149,6 +149,17 @@ function keepAlive() {
     }
   }, 10 * 60 * 1000); // every 10 minutes
 }
+
+
+setInterval(() => {
+  axios.get('https://high-bay-light-73hq.onrender.com/health')
+    .then(() => {
+      console.log('Keep-Alive: Server pinged successfully at ' + new Date().toISOString());
+    })
+    .catch((err) => {
+      console.error('Keep-Alive Error:', err.message);
+    });
+}, 600000);
 
 // ============================================================
 //  START
