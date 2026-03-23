@@ -4,8 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>AIPL · High Bay Control</title>
-<link rel="icon" href="/favicon.svg"/>
-<!-- <img src="/logo.png" class="logo-img"/> -->
+<link rel="icon" type="image/png" href="/favicon.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -413,7 +412,7 @@ function setMqtt(ok){
 
 /* ── API ── */
 async function apiPost(url,body){
-  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(7000)});
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
   if(!res.ok) throw new Error('HTTP '+res.status);
   return res.json();
 }
@@ -454,7 +453,7 @@ function setBusy(b){
 /* ── POLL ── */
 async function poll(){
   try{
-    const r=await fetch('/api/grid',{signal:AbortSignal.timeout(4000)});
+    const r=await fetch('/api/grid',{signal:AbortSignal.timeout(8000)});
     applyResp(await r.json());
   }catch{setMqtt(false);}
 }
@@ -470,7 +469,7 @@ buildRowsGrid();
 restoreState();  // restore page before first poll
 applyGrid();
 poll();
-setInterval(poll,4000);
+setInterval(poll,6000);
 </script>
 </body>
 </html>
