@@ -207,23 +207,21 @@ app.get('/health', (req, res) => {
 });
 
 // ============================================================
-//  KEEP-ALIVE — self-ping so Render free tier never sleeps
+//  KEEP-ALIVE — self-ping every 5 min so Render never sleeps
 // ============================================================
-const RENDER_URL = process.env.RENDER_URL || '';
-if (RENDER_URL) {
-  // axios is only needed if RENDER_URL is set
-  let axiosLib;
-  try { axiosLib = require('axios'); } catch { axiosLib = null; }
+const RENDER_URL = process.env.RENDER_URL || 'https://high-bay-light-73hq.onrender.com';
 
-  if (axiosLib) {
-    setInterval(() => {
-      axiosLib.get(`${RENDER_URL}/health`, { timeout: 8000 })
-        .then(() => console.log('[KEEP-ALIVE] Ping OK →', RENDER_URL))
-        .catch((e) => console.warn('[KEEP-ALIVE] Ping failed:', e.message));
-    }, 10 * 60 * 1000);
-    console.log('[KEEP-ALIVE] Self-ping enabled →', RENDER_URL);
-  }
-}
+setInterval(() => {
+  const https = require('https');
+  const url = `${RENDER_URL}/health`;
+  https.get(url, (res) => {
+    console.log('[KEEP-ALIVE] Ping OK →', url, '| Status:', res.statusCode);
+  }).on('error', (e) => {
+    console.warn('[KEEP-ALIVE] Ping failed:', e.message);
+  });
+}, 5 * 60 * 1000); // every 5 minutes
+
+console.log('[KEEP-ALIVE] Self-ping enabled →', RENDER_URL);
 
 // ============================================================
 //  START
