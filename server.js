@@ -3,26 +3,107 @@
 require('dotenv').config();
 
 const express = require('express');
-const axios   = require('axios');
 const cors    = require('cors');
 const path    = require('path');
-const axios = require('axios');
-const app  = express();
-const PORT = process.env.PORT || 3000;
+const mqtt    = require('mqtt');
+const app     = express();
+const PORT    = process.env.PORT || 3000;
 
-// ── ThingsBoard Config ──
-const TB_HOST      = process.env.TB_HOST      || 'https://thingsboard.cloud';
-const TB_EMAIL     = process.env.TB_EMAIL     || 'naveenkumarak2002@gmail.com';
-const TB_PASSWORD  = process.env.TB_PASSWORD  || 'Naveen235623@@@';
-const TB_DEVICE_ID = process.env.TB_DEVICE_ID || '801f4020-0e45-11f1-b6d0-133d513d174e';
+// ============================================================
+//  HiveMQ Config — matches firmware exactly
+// ============================================================
+const HIVEMQ_HOST     = process.env.HIVEMQ_HOST     || 'a0d0d0e9332a4d3db7516f6125f6e677.s1.eu.hivemq.cloud';
+const HIVEMQ_PORT     = parseInt(process.env.HIVEMQ_PORT || '8883');
+const HIVEMQ_USERNAME = process.env.HIVEMQ_USERNAME || 'High-Bay Lights';
+const HIVEMQ_PASSWORD = process.env.HIVEMQ_PASSWORD || 'YOUR_PASSWORD_HERE';
+const HIVEMQ_CLIENT   = 'aipl-server-' + Math.random().toString(16).slice(2, 8);
 
-// ── Render keep-alive URL (set this to your Render public URL) ──
-const RENDER_URL   = process.env.RENDER_URL   || '';
+// ============================================================
+//  TOPIC HELPERS — must match firmware snprintf patterns exactly
+//
+//  Firmware publishes  : aipl/row/{R}/light/{L}/state      payload: ON | OFF
+//  Firmware subscribes : aipl/row/{R}/light/{L}/command    payload: ON | OFF
+//                        aipl/row/{R}/command              payload: ON | OFF
+//                        aipl/all/command                  payload: ON | OFF
+//
+//  Server subscribes   : aipl/row/+/light/+/state  (wildcard, all 36 devices)
+//  Server publishes    : command topics above
+// ============================================================
+const TOPIC_CMD_SINGLE = (r, l) => `aipl/row/${r}/light/${l}/command`;
+const TOPIC_CMD_ROW    = (r)    => `aipl/row/${r}/command`;
+const TOPIC_CMD_ALL    = ()     => `aipl/all/command`;
+const STATE_WILDCARD   = 'aipl/row/+/light/+/state';
 
-// ── In-memory ──
-let jwtToken    = null;
-let jwtExpiry   = 0;
-let cachedState = null;
+// ============================================================
+//  IN-MEMORY GRID  [row 0-5][light 0-5]
+//
+//  *** Default: true (ON) ***
+//  Because the firmware boots with light ON (fail-safe).
+//  If the server defaults to false but ESP32 is physically ON,
+//  the dashboard shows wrong state until the first MQTT message.
+//  Defaulting to true avoids that visual glitch.
+// ============================================================
+const grid = Array.from({ length: 6 }, () => Array(6).fill(true));
+
+// ============================================================
+//  MQTT CLIENT
+// ============================================================
+const mqttClient = mqtt.connect(`mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`, {
+  username:           HIVEMQ_USERNAME,
+  password:           HIVEMQ_PASSWORD,
+  clientId:           HIVEMQ_CLIENT,
+  rejectUnauthorized: true,   // verify HiveMQ TLS cert
+  reconnectPeriod:    3000,   // retry every 3s on disconnect
+  keepalive:          60,
+});
+
+mqttClient.on('connect', () => {
+  console.log('[MQTT] Connected to HiveMQ as', HIVEMQ_CLIENT);
+  // Subscribe to ALL device state topics with wildcard
+  mqttClient.subscribe(STATE_WILDCARD, { qos: 1 }, (err) => {
+    if (err) console.error('[MQTT] Subscribe error:', err.message);
+    else     console.log('[MQTT] Subscribed to', STATE_WILDCARD);
+  });
+});
+
+// ── Incoming state from each ESP32 ─────────────────────────
+mqttClient.on('message', (topic, payload) => {
+  // Expected topic: aipl/row/R/light/L/state
+  // parts:          [0]  [1] [2][3]   [4][5]
+  const parts = topic.split('/');
+  if (
+    parts.length === 6   &&
+    parts[0] === 'aipl'  &&
+    parts[1] === 'row'   &&
+    parts[3] === 'light' &&
+    parts[5] === 'state'
+  ) {
+    const row   = parseInt(parts[2], 10);
+    const light = parseInt(parts[4], 10);
+    const state = payload.toString().trim().toUpperCase() === 'ON';
+
+    if (row >= 0 && row < 6 && light >= 0 && light < 6) {
+      grid[row][light] = state;
+      console.log(`[STATE] Row ${row+1} Light ${light+1} → ${state ? 'ON' : 'OFF'}`);
+    }
+  }
+});
+
+mqttClient.on('error',     (e) => console.error('[MQTT] Error:',      e.message));
+mqttClient.on('reconnect', ()  => console.log  ('[MQTT] Reconnecting...'));
+mqttClient.on('offline',   ()  => console.warn ('[MQTT] Went offline'));
+
+// ── Publish helper ─────────────────────────────────────────
+function publish(topic, payload) {
+  return new Promise((resolve, reject) => {
+    if (!mqttClient.connected)
+      return reject(new Error('MQTT not connected'));
+    mqttClient.publish(topic, payload, { qos: 1, retain: false }, (err) => {
+      if (err) reject(err);
+      else     resolve();
+    });
+  });
+}
 
 // ============================================================
 //  MIDDLEWARE
@@ -33,148 +114,129 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
-//  JWT LOGIN
-// ============================================================
-async function getJWT() {
-  if (jwtToken && Date.now() < jwtExpiry) return jwtToken;
-  const r = await axios.post(`${TB_HOST}/api/auth/login`, {
-    username: TB_EMAIL,
-    password: TB_PASSWORD
-  }, { timeout: 8000 });
-  jwtToken  = r.data.token;
-  jwtExpiry = Date.now() + 50 * 60 * 1000;
-  console.log('[JWT] Token refreshed');
-  return jwtToken;
-}
-
-// ============================================================
-//  THINGSBOARD HELPERS
-// ============================================================
-
-// Read latest telemetry
-async function tbGetStatus() {
-  const jwt = await getJWT();
-  const url = `${TB_HOST}/api/plugins/telemetry/DEVICE/${TB_DEVICE_ID}/values/timeseries?keys=light_state,rssi,kwh_used,on_seconds,off_seconds,firmware`;
-  const r   = await axios.get(url, {
-    headers: { 'X-Authorization': `Bearer ${jwt}` },
-    timeout: 8000
-  });
-  const d   = r.data;
-  const get = (key) => d[key]?.[0]?.value;
-  return {
-    state:       get('light_state') === true || get('light_state') === 'true',
-    rssi:        get('rssi')        ?? '--',
-    kwh:         get('kwh_used')    ?? 0,
-    on_seconds:  get('on_seconds')  ?? 0,
-    off_seconds: get('off_seconds') ?? 0,
-    firmware:    get('firmware')    ?? '--',
-    mqtt:        true
-  };
-}
-
-// Send server-side RPC to device via JWT
-async function tbSetLight(desired) {
-  const jwt  = await getJWT();
-  const url  = `${TB_HOST}/api/rpc/oneway/${TB_DEVICE_ID}`;
-  const body = {
-    method:     'setLight',
-    params:     { state: desired },
-    timeout:    5000,
-    persistent: false
-  };
-  const r = await axios.post(url, body, {
-    headers: { 'X-Authorization': `Bearer ${jwt}` },
-    timeout: 10000
-  });
-  return r.data;
-}
-
-// ============================================================
 //  ROUTES
 // ============================================================
 
-// GET /proxy/status
-app.get('/proxy/status', async (req, res) => {
+// GET /api/grid — full 6×6 state snapshot
+app.get('/api/grid', (req, res) => {
+  res.json({ grid, mqtt: mqttClient.connected });
+});
+
+// POST /api/light — toggle / set a single light
+// Body: { row: 0-5, light: 0-5, state: true|false }
+app.post('/api/light', async (req, res) => {
+  const { row, light, state } = req.body;
+  if (row === undefined || light === undefined || state === undefined)
+    return res.status(400).json({ error: 'row, light, state required' });
+
+  const r = parseInt(row,   10);
+  const l = parseInt(light, 10);
+  const s = (state === true || state === 'true' || state === 1 || state === '1');
+
+  if (isNaN(r) || r < 0 || r > 5 || isNaN(l) || l < 0 || l > 5)
+    return res.status(400).json({ error: 'row/light out of range (0–5)' });
+
   try {
-    const status = await tbGetStatus();
-    cachedState  = status.state;
-    res.json(status);
+    await publish(TOPIC_CMD_SINGLE(r, l), s ? 'ON' : 'OFF');
+    grid[r][l] = s;   // optimistic — real state confirmed when ESP32 publishes back
+    console.log(`[CMD] Row ${r+1} Light ${l+1} → ${s ? 'ON' : 'OFF'}`);
+    res.json({ grid, mqtt: mqttClient.connected });
   } catch (e) {
-    console.error('[STATUS] Error:', e.message);
-    res.status(503).json({ error: 'ThingsBoard unreachable', detail: e.message });
+    console.error('[CMD] publish error:', e.message);
+    res.status(503).json({ error: 'MQTT publish failed', detail: e.message });
   }
 });
 
-// POST /proxy/set?state=1 or 0
-app.post('/proxy/set', async (req, res) => {
-  const sv = req.query.state ?? req.body.state;
-  if (sv === undefined) return res.status(400).json({ error: 'state param required' });
-  const desired = sv === '1' || sv === true || sv === 'true';
+// POST /api/row — set all 6 lights in one row
+// Body: { row: 0-5, state: true|false }
+app.post('/api/row', async (req, res) => {
+  const { row, state } = req.body;
+  if (row === undefined || state === undefined)
+    return res.status(400).json({ error: 'row, state required' });
+
+  const r = parseInt(row, 10);
+  const s = (state === true || state === 'true' || state === 1 || state === '1');
+
+  if (isNaN(r) || r < 0 || r > 5)
+    return res.status(400).json({ error: 'row out of range (0–5)' });
+
   try {
-    await tbSetLight(desired);
-    console.log(`[SET] Light → ${desired ? 'ON' : 'OFF'}`);
-    await new Promise(r => setTimeout(r, 1500));
-    const status = await tbGetStatus();
-    cachedState  = status.state;
-    res.json(status);
+    // One MQTT message → all 6 ESP32s in this row receive it
+    await publish(TOPIC_CMD_ROW(r), s ? 'ON' : 'OFF');
+    for (let l = 0; l < 6; l++) grid[r][l] = s;
+    console.log(`[CMD] Row ${r+1} ALL → ${s ? 'ON' : 'OFF'}`);
+    res.json({ grid, mqtt: mqttClient.connected });
   } catch (e) {
-    console.error('[SET] Error:', e.message);
-    res.status(503).json({ error: 'Command failed', detail: e.message });
+    console.error('[CMD] publish error:', e.message);
+    res.status(503).json({ error: 'MQTT publish failed', detail: e.message });
   }
 });
 
-// GET /health — also used as keep-alive ping target
+// POST /api/all — all 36 lights at once
+// Body: { state: true|false }
+app.post('/api/all', async (req, res) => {
+  const { state } = req.body;
+  if (state === undefined)
+    return res.status(400).json({ error: 'state required' });
+
+  const s = (state === true || state === 'true' || state === 1 || state === '1');
+
+  try {
+    // One MQTT message → all 36 ESP32s receive it
+    await publish(TOPIC_CMD_ALL(), s ? 'ON' : 'OFF');
+    for (let r = 0; r < 6; r++)
+      for (let l = 0; l < 6; l++) grid[r][l] = s;
+    console.log(`[CMD] ALL LIGHTS → ${s ? 'ON' : 'OFF'}`);
+    res.json({ grid, mqtt: mqttClient.connected });
+  } catch (e) {
+    console.error('[CMD] publish error:', e.message);
+    res.status(503).json({ error: 'MQTT publish failed', detail: e.message });
+  }
+});
+
+// GET /health — server + MQTT status
 app.get('/health', (req, res) => {
   res.json({
     server:    'online',
-    tb_host:   TB_HOST,
-    device_id: TB_DEVICE_ID,
+    mqtt:      mqttClient.connected ? 'connected' : 'disconnected',
+    hivemq:    `${HIVEMQ_HOST}:${HIVEMQ_PORT}`,
+    client_id: HIVEMQ_CLIENT,
     uptime_s:  Math.floor(process.uptime()),
-    lastState: cachedState,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // ============================================================
-//  KEEP-ALIVE — self-ping every 10 minutes so Render never sleeps
+//  KEEP-ALIVE — self-ping so Render free tier never sleeps
 // ============================================================
-function keepAlive() {
-  if (!RENDER_URL) return; // only runs when RENDER_URL is set
-  setInterval(async () => {
-    try {
-      await axios.get(`${RENDER_URL}/health`, { timeout: 8000 });
-      console.log('[KEEP-ALIVE] Ping sent →', RENDER_URL);
-    } catch (e) {
-      console.warn('[KEEP-ALIVE] Ping failed:', e.message);
-    }
-  }, 10 * 60 * 1000); // every 10 minutes
+const RENDER_URL = process.env.RENDER_URL || '';
+if (RENDER_URL) {
+  // axios is only needed if RENDER_URL is set
+  let axiosLib;
+  try { axiosLib = require('axios'); } catch { axiosLib = null; }
+
+  if (axiosLib) {
+    setInterval(() => {
+      axiosLib.get(`${RENDER_URL}/health`, { timeout: 8000 })
+        .then(() => console.log('[KEEP-ALIVE] Ping OK →', RENDER_URL))
+        .catch((e) => console.warn('[KEEP-ALIVE] Ping failed:', e.message));
+    }, 10 * 60 * 1000);
+    console.log('[KEEP-ALIVE] Self-ping enabled →', RENDER_URL);
+  }
 }
-
-
-setInterval(() => {
-  axios.get('https://high-bay-light-73hq.onrender.com/health')
-    .then(() => {
-      console.log('Keep-Alive: Server pinged successfully at ' + new Date().toISOString());
-    })
-    .catch((err) => {
-      console.error('Keep-Alive Error:', err.message);
-    });
-}, 600000);
 
 // ============================================================
 //  START
 // ============================================================
 app.listen(PORT, () => {
-  console.log('\n╔══════════════════════════════════════╗');
-  console.log('║  AIPL Light Controller — server.js   ║');
-  console.log('╚══════════════════════════════════════╝');
+  console.log('\n╔════════════════════════════════════════════╗');
+  console.log('║  AIPL High Bay — HiveMQ Server v2.0        ║');
+  console.log('╚════════════════════════════════════════════╝');
   console.log(`\n  UI      : http://localhost:${PORT}`);
-  console.log(`  Status  : http://localhost:${PORT}/proxy/status`);
-  console.log(`  Set ON  : POST http://localhost:${PORT}/proxy/set?state=1`);
+  console.log(`  Grid    : http://localhost:${PORT}/api/grid`);
   console.log(`  Health  : http://localhost:${PORT}/health`);
-  console.log(`\n  TB Host : ${TB_HOST}`);
-  console.log(`  Device  : ${TB_DEVICE_ID || '⚠ NOT SET'}`);
-  console.log(`  Email   : ${TB_EMAIL     || '⚠ NOT SET'}`);
-  console.log(`  Render  : ${RENDER_URL   || '⚠ NOT SET — add RENDER_URL to env'}\n`);
-  keepAlive(); // start self-ping
+  console.log(`\n  HiveMQ  : ${HIVEMQ_HOST}:${HIVEMQ_PORT}`);
+  console.log(`  User    : ${HIVEMQ_USERNAME}`);
+  console.log(`  Client  : ${HIVEMQ_CLIENT}`);
+  console.log(`  Render  : ${RENDER_URL || '(not set — local only)'}\n`);
 });
