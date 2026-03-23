@@ -14,8 +14,8 @@ const PORT    = process.env.PORT || 3000;
 // ============================================================
 const HIVEMQ_HOST     = process.env.HIVEMQ_HOST     || 'a0d0d0e9332a4d3db7516f6125f6e677.s1.eu.hivemq.cloud';
 const HIVEMQ_PORT     = parseInt(process.env.HIVEMQ_PORT || '8883');
-const HIVEMQ_USERNAME = process.env.HIVEMQ_USERNAME || 'High-Bay Lights';
-const HIVEMQ_PASSWORD = process.env.HIVEMQ_PASSWORD || 'YOUR_PASSWORD_HERE';
+const HIVEMQ_USERNAME = process.env.HIVEMQ_USERNAME || 'Highbaylight';
+const HIVEMQ_PASSWORD = process.env.HIVEMQ_PASSWORD || 'Naveen235623@@';
 const HIVEMQ_CLIENT   = 'aipl-server-' + Math.random().toString(16).slice(2, 8);
 
 // ============================================================
