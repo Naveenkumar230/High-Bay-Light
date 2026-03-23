@@ -2,51 +2,475 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>AIPL · High Bay Controller</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="style.css"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>AIPL · High Bay Control</title>
+<link rel="icon" href="/favicon.svg"/>
+<!-- <img src="/logo.png" class="logo-img"/> -->
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#06090d;--surface:#0b1018;--card:#0e151e;--border:#182030;--border-hi:#243348;
+  --yellow:#f5c800;--yellow-d:#c49e00;--yellow-gl:rgba(245,200,0,0.15);
+  --white:#dde4ee;--muted:#334455;--muted-hi:#4a6070;
+  --red:#e03535;--green:#18c96a;--radius:14px;
+}
+html{height:100%;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);min-height:100%;font-family:'DM Mono',monospace;color:var(--white);overflow-x:hidden}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(24,32,48,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(24,32,48,0.3) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+/* HEADER */
+header{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;
+  background:rgba(6,9,13,0.94);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);gap:12px;
+}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-img{height:32px;width:auto;object-fit:contain;display:block}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:5px;color:var(--yellow);white-space:nowrap;line-height:1}
+.logo-text small{display:block;font-size:8px;letter-spacing:4px;color:var(--muted-hi);margin-top:-1px;font-family:'DM Mono',monospace;font-weight:300}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.mqtt-status{display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:2px;color:var(--muted-hi);text-transform:uppercase;white-space:nowrap}
+.mqtt-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .4s;flex-shrink:0}
+.mqtt-dot.ok{background:var(--green);animation:blink 2.5s infinite}
+.mqtt-dot.err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.hbtn{padding:7px 14px;border-radius:7px;border:1px solid var(--border-hi);background:transparent;color:var(--muted-hi);font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.hbtn:hover{background:var(--border);color:var(--white)}
+.hbtn:active{transform:scale(.95)}
+.hbtn.yellow{background:var(--yellow);color:#06090d;border-color:var(--yellow)}
+.hbtn.yellow:hover{background:#ffd700}
+.hbtn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+/* PAGE SYSTEM */
+.shell{position:relative;overflow:hidden}
+.pg{position:absolute;inset:0;width:100%;will-change:transform}
+.pg.active{position:relative;inset:auto;z-index:1}
+.pg.gone{visibility:hidden;pointer-events:none;position:absolute}
+.pg.sir{animation:sir .3s cubic-bezier(.4,0,.2,1) forwards}
+.pg.sol{animation:sol .3s cubic-bezier(.4,0,.2,1) forwards}
+.pg.sil{animation:sil .3s cubic-bezier(.4,0,.2,1) forwards}
+.pg.sor{animation:sor .3s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes sir{from{transform:translateX(100%);opacity:.6}to{transform:none;opacity:1}}
+@keyframes sol{from{transform:none;opacity:1}to{transform:translateX(-28%);opacity:0}}
+@keyframes sil{from{transform:translateX(-28%);opacity:0}to{transform:none;opacity:1}}
+@keyframes sor{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.5}}
+/* WRAP */
+.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:28px 20px 80px}
+.sec-label{font-size:9px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+/* STATS BAR — home (3 stats only, no load) */
+.stats-bar{display:flex;margin-bottom:28px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);overflow:hidden}
+.stat{flex:1;padding:16px 18px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:5px}
+.stat:last-child{border-right:none}
+.stat-lbl{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--white)}
+.stat-val.hi{color:var(--yellow)}
+/* ROW CARDS */
+.rows-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:640px){.rows-grid{grid-template-columns:repeat(3,1fr)}}
+.row-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 16px 16px;cursor:pointer;
+  transition:border-color .25s,box-shadow .25s,transform .15s;
+  user-select:none;-webkit-user-select:none;
+  position:relative;overflow:hidden;
+  opacity:0;animation:fadeUp .3s ease forwards;
+}
+.row-card:nth-child(1){animation-delay:.04s}.row-card:nth-child(2){animation-delay:.08s}
+.row-card:nth-child(3){animation-delay:.12s}.row-card:nth-child(4){animation-delay:.16s}
+.row-card:nth-child(5){animation-delay:.20s}.row-card:nth-child(6){animation-delay:.24s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.row-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--yellow-gl) 0%,transparent 65%);opacity:0;transition:opacity .25s;pointer-events:none}
+.row-card:hover{border-color:rgba(245,200,0,.3);box-shadow:0 4px 24px rgba(0,0,0,.5),0 0 0 1px rgba(245,200,0,.1);transform:translateY(-2px)}
+.row-card:hover::before{opacity:1}
+.row-card:active{transform:scale(.97)}
+.row-card.lit{border-color:rgba(245,200,0,.2)}
+.row-card::after{content:'';position:absolute;left:0;top:10%;bottom:10%;width:2px;background:var(--yellow);border-radius:0 2px 2px 0;opacity:0;transition:opacity .25s}
+.row-card.lit::after{opacity:1}
+.rc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.rc-num{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:var(--muted-hi);transition:color .25s;line-height:1}
+.row-card.lit .rc-num{color:var(--yellow)}
+.rc-chip{font-size:9px;letter-spacing:2px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:3px 7px;border-radius:5px;transition:all .25s}
+.row-card.lit .rc-chip{color:var(--yellow-d);background:rgba(245,200,0,.08);border-color:rgba(245,200,0,.2)}
+.mini-dots{display:flex;gap:5px;margin-bottom:14px}
+.md{flex:1;height:8px;border-radius:3px;background:var(--muted);transition:background .3s,box-shadow .3s}
+.md.on{background:var(--yellow);box-shadow:0 0 6px rgba(245,200,0,.5)}
+.rc-footer{display:flex;align-items:center;justify-content:space-between}
+.rc-label{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.rc-arrow{font-size:16px;color:var(--muted);transition:transform .2s,color .2s}
+.row-card:hover .rc-arrow{transform:translateX(4px);color:var(--yellow)}
+/* DETAIL TOPBAR */
+.detail-topbar{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.back-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:1px solid var(--border-hi);background:transparent;color:var(--muted-hi);font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;cursor:pointer;transition:all .18s;flex-shrink:0}
+.back-btn:hover{background:var(--border);color:var(--white)}
+.back-btn:active{transform:scale(.95)}
+.back-btn svg{width:12px;height:12px;flex-shrink:0}
+.dt-info{flex:1;min-width:0}
+.dt-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:5px;color:var(--yellow)}
+.dt-sub{font-size:9px;letter-spacing:3px;color:var(--muted-hi);text-transform:uppercase;margin-top:1px}
+.dt-btns{display:flex;gap:8px;flex-shrink:0}
+/* ROW STATS — 2 only (no load) */
+.row-stats{display:flex;gap:10px;margin-bottom:22px}
+.rs{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.rs-lbl{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
+.rs-val{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--white)}
+.rs-val.hi{color:var(--yellow)}
+/* LIGHTS GRID */
+.lights-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:480px){.lights-grid{grid-template-columns:repeat(3,1fr)}}
+.light-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 14px 14px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  transition:border-color .25s,box-shadow .25s,transform .15s;
+  user-select:none;-webkit-user-select:none;
+  position:relative;overflow:hidden;
+  opacity:0;animation:fadeUp .28s ease forwards;
+}
+.light-card:nth-child(1){animation-delay:.04s}.light-card:nth-child(2){animation-delay:.08s}
+.light-card:nth-child(3){animation-delay:.12s}.light-card:nth-child(4){animation-delay:.16s}
+.light-card:nth-child(5){animation-delay:.20s}.light-card:nth-child(6){animation-delay:.24s}
+.light-card.on{border-color:rgba(245,200,0,.35);box-shadow:0 0 24px rgba(245,200,0,.1),0 4px 20px rgba(0,0,0,.4)}
+.light-card:hover{transform:translateY(-2px)}
+.light-card:active{transform:scale(.96)}
+.light-card.busy{pointer-events:none;opacity:.5}
+.light-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40%;background:radial-gradient(ellipse at 50% 100%,rgba(245,200,0,.12) 0%,transparent 70%);opacity:0;transition:opacity .4s;pointer-events:none}
+.light-card.on::after{opacity:1}
+/* fixture */
+.fixture{display:flex;flex-direction:column;align-items:center}
+.lc-pipe{width:5px;height:11px;background:linear-gradient(180deg,#1a2530,#2a3848);border-radius:2px 2px 0 0}
+.lc-body{width:58px;display:flex;flex-direction:column;align-items:center}
+.lc-top{width:100%;height:10px;background:linear-gradient(180deg,#2a3848,#1e2c3a);border-radius:3px 3px 0 0}
+.lc-fins{display:flex;gap:2px;padding:1px 5px;background:#1a2530}
+.lc-fin{width:5px;height:9px;background:linear-gradient(180deg,#243040,#3a5060);border-radius:0 0 2px 2px}
+.lc-dome{width:100%;height:18px;background:linear-gradient(180deg,#1e2c3a,#243040);border-radius:0 0 30px 30px;position:relative;overflow:hidden}
+.lc-lens{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:40px;height:10px;border-radius:50%;background:rgba(50,70,90,.3);transition:all .45s ease}
+.light-card.on .lc-lens{background:radial-gradient(ellipse,#fffbe0 0%,var(--yellow) 45%,transparent 100%);box-shadow:0 0 16px 8px rgba(245,200,0,.55),0 0 32px 12px rgba(245,200,0,.2)}
+.lc-beam{width:0;height:0;pointer-events:none;transition:all .5s ease}
+.light-card.on .lc-beam{border-left:28px solid transparent;border-right:28px solid transparent;border-top:56px solid rgba(245,200,0,.055);filter:blur(4px)}
+.lc-name{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:3px;color:var(--muted-hi);transition:color .3s}
+.light-card.on .lc-name{color:rgba(245,200,0,.8)}
+.lc-state-row{display:flex;align-items:center;gap:8px;width:100%}
+.lc-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .3s}
+.light-card.on .lc-dot{background:var(--green);box-shadow:0 0 6px rgba(24,201,106,.5)}
+.lc-toggle{flex:1;padding:7px 0;border-radius:6px;border:1px solid var(--border-hi);background:transparent;color:var(--muted-hi);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .18s}
+.light-card.on .lc-toggle{background:rgba(245,200,0,.12);border-color:rgba(245,200,0,.35);color:var(--yellow)}
+.lc-toggle:active{transform:scale(.94)}
+/* RESPONSIVE */
+@media(max-width:480px){
+  header{padding:0 14px}
+  .hbtn{padding:6px 10px;font-size:11px;letter-spacing:2px}
+  .logo-text{font-size:18px}
+  .wrap{padding:20px 14px 60px}
+  .stats-bar{flex-wrap:wrap}
+  .stat{min-width:33.33%}
+  .rows-grid{gap:10px}
+  .row-card{padding:14px 12px}
+  .dt-title{font-size:22px}
+  .dt-btns .hbtn:first-child{display:none}
+  .row-stats{gap:7px}
+  .lights-grid{gap:10px}
+  .light-card{padding:14px 10px 12px}
+}
+@media(max-width:360px){
+  .rows-grid{grid-template-columns:1fr 1fr}
+  .mqtt-status{display:none}
+  .logo-img{display:none}
+}
+</style>
 </head>
 <body>
 
-  <div class="scene">
-
-    <!-- Fixture -->
-    <div class="fixture-wrap">
-      <div class="ceiling-pipe"></div>
-      <div class="fixture">
-        <div class="fixture-top"></div>
-        <div class="fins">
-          <div class="fin"></div><div class="fin"></div><div class="fin"></div>
-          <div class="fin"></div><div class="fin"></div><div class="fin"></div>
-          <div class="fin"></div><div class="fin"></div><div class="fin"></div>
-        </div>
-        <div class="dome">
-          <div class="lens" id="lens"></div>
-        </div>
-      </div>
-      <div class="beam" id="beam"></div>
-      <div class="floor-glow" id="floorGlow"></div>
+<header>
+  <div class="logo">
+    <img src="/logo.png" alt="AIPL Logo" class="logo-img" onerror="this.style.display='none'"/>
+    <div class="logo-text">AIPL<small>HIGH BAY CONTROL</small></div>
+  </div>
+  <div class="hdr-right">
+    <div class="mqtt-status">
+      <div class="mqtt-dot" id="mqttDot"></div>
+      <span id="mqttLabel">Connecting</span>
     </div>
+    <button class="hbtn" id="btnAllOff">ALL OFF</button>
+    <button class="hbtn yellow" id="btnAllOn">ALL ON</button>
+  </div>
+</header>
 
-    <!-- Card -->
-    <div class="card">
-      <div class="label">CHANNEL 01</div>
-      <div class="state-txt" id="stateTxt">OFF</div>
+<div class="shell" id="shell">
 
-      <div class="btn-row">
-        <button class="btn btn-on"  id="btnOn">ON</button>
-        <button class="btn btn-off" id="btnOff">OFF</button>
+  <!-- HOME PAGE -->
+  <div class="pg active" id="pgHome">
+    <div class="wrap">
+      <div class="sec-label">Facility Grid — 6 Rows × 6 Lights</div>
+      <div class="stats-bar">
+        <div class="stat"><div class="stat-lbl">Lights ON</div><div class="stat-val hi" id="statOn">36</div></div>
+        <div class="stat"><div class="stat-lbl">Lights OFF</div><div class="stat-val" id="statOff">0</div></div>
+        <div class="stat"><div class="stat-lbl">Rows Active</div><div class="stat-val" id="statRows">6</div></div>
       </div>
-
-      <div class="status-row">
-        <div class="dot" id="dot"></div>
-        <span id="statusMsg">Ready</span>
-      </div>
+      <div class="rows-grid" id="rowsGrid"></div>
     </div>
-
   </div>
 
-<script src="app.js"></script>
+  <!-- ROW DETAIL PAGE -->
+  <div class="pg gone" id="pgDetail">
+    <div class="wrap">
+      <div class="detail-topbar">
+        <button class="back-btn" id="backBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          BACK
+        </button>
+        <div class="dt-info">
+          <div class="dt-title" id="dtTitle">ROW 1</div>
+          <div class="dt-sub">6 LIGHTS — TAP TO TOGGLE</div>
+        </div>
+        <div class="dt-btns">
+          <button class="hbtn" id="btnRowOff">ROW OFF</button>
+          <button class="hbtn yellow" id="btnRowOn">ROW ON</button>
+        </div>
+      </div>
+      <div class="row-stats">
+        <div class="rs"><div class="rs-lbl">ON</div><div class="rs-val hi" id="rs-on">6</div></div>
+        <div class="rs"><div class="rs-lbl">OFF</div><div class="rs-val" id="rs-off">0</div></div>
+      </div>
+      <div class="lights-grid" id="lightsGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+const ROWS=6,LIGHTS=6;
+const grid=Array.from({length:ROWS},()=>Array(LIGHTS).fill(true));
+let busy=false,currentRow=0,transitioning=false;
+const pgHome=document.getElementById('pgHome');
+const pgDetail=document.getElementById('pgDetail');
+
+/* ── SAVE / RESTORE PAGE STATE on refresh ── */
+function saveState(){
+  if(!pgDetail.classList.contains('gone')){
+    sessionStorage.setItem('aipl_page','detail');
+    sessionStorage.setItem('aipl_row',String(currentRow));
+  } else {
+    sessionStorage.setItem('aipl_page','home');
+  }
+}
+
+function restoreState(){
+  const page=sessionStorage.getItem('aipl_page');
+  const row=parseInt(sessionStorage.getItem('aipl_row')||'0',10);
+  if(page==='detail'){
+    currentRow=row;
+    buildLightsGrid(row);
+    updateRowStats(row);
+    document.getElementById('dtTitle').textContent='ROW '+(row+1);
+    pgHome.classList.add('gone');
+    pgHome.classList.remove('active');
+    pgDetail.classList.remove('gone');
+    pgDetail.classList.add('active');
+  }
+}
+
+/* ── NAVIGATION ── */
+function goToRow(r){
+  if(transitioning)return;
+  transitioning=true;currentRow=r;
+  buildLightsGrid(r);updateRowStats(r);
+  document.getElementById('dtTitle').textContent='ROW '+(r+1);
+  pgDetail.classList.remove('gone');
+  pgDetail.classList.add('sir');
+  pgHome.classList.add('sol');
+  pgDetail.addEventListener('animationend',function h(){
+    pgDetail.removeEventListener('animationend',h);
+    pgDetail.classList.remove('sir');pgHome.classList.remove('sol');
+    pgHome.classList.add('gone');pgDetail.classList.add('active');
+    transitioning=false;
+    saveState();
+    window.scrollTo({top:0,behavior:'instant'});
+  });
+}
+
+function goHome(){
+  if(transitioning)return;
+  transitioning=true;
+  pgHome.classList.remove('gone');
+  pgHome.classList.add('sil');
+  pgDetail.classList.add('sor');
+  pgHome.addEventListener('animationend',function h(){
+    pgHome.removeEventListener('animationend',h);
+    pgHome.classList.remove('sil');pgDetail.classList.remove('sor');
+    pgDetail.classList.add('gone');pgDetail.classList.remove('active');
+    pgHome.classList.add('active');
+    transitioning=false;
+    saveState();
+    window.scrollTo({top:0,behavior:'instant'});
+  });
+}
+document.getElementById('backBtn').addEventListener('click',goHome);
+
+/* ── BUILD HOME ── */
+function buildRowsGrid(){
+  const c=document.getElementById('rowsGrid');c.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    const el=document.createElement('div');
+    el.className='row-card lit';el.id='rc-'+r;
+    el.innerHTML=`
+      <div class="rc-head">
+        <div class="rc-num">ROW ${r+1}</div>
+        <div class="rc-chip" id="rcc-${r}">6/6 ON</div>
+      </div>
+      <div class="mini-dots" id="mdots-${r}">${Array(6).fill('<div class="md on"></div>').join('')}</div>
+      <div class="rc-footer">
+        <span class="rc-label">Tap to control</span>
+        <span class="rc-arrow">›</span>
+      </div>`;
+    el.addEventListener('click',()=>goToRow(r));
+    c.appendChild(el);
+  }
+}
+
+/* ── BUILD LIGHTS ── */
+function buildLightsGrid(r){
+  const c=document.getElementById('lightsGrid');c.innerHTML='';
+  for(let l=0;l<LIGHTS;l++){
+    const on=grid[r][l];
+    const el=document.createElement('div');
+    el.className='light-card'+(on?' on':'');el.id='lc-'+r+'-'+l;
+    el.innerHTML=`
+      <div class="fixture">
+        <div class="lc-pipe"></div>
+        <div class="lc-body">
+          <div class="lc-top"></div>
+          <div class="lc-fins"><div class="lc-fin"></div><div class="lc-fin"></div><div class="lc-fin"></div><div class="lc-fin"></div><div class="lc-fin"></div></div>
+          <div class="lc-dome"><div class="lc-lens"></div></div>
+        </div>
+      </div>
+      <div class="lc-beam"></div>
+      <div class="lc-name">LIGHT ${l+1}</div>
+      <div class="lc-state-row">
+        <div class="lc-dot"></div>
+        <button class="lc-toggle">${on?'ON':'OFF'}</button>
+      </div>`;
+    el.addEventListener('click',()=>toggleLight(r,l));
+    c.appendChild(el);
+  }
+}
+
+/* ── APPLY GRID ── */
+function applyGrid(){
+  let totalOn=0,rowsActive=0;
+  for(let r=0;r<ROWS;r++){
+    let rowOn=0;
+    for(let l=0;l<LIGHTS;l++) if(grid[r][l]) rowOn++;
+    totalOn+=rowOn;if(rowOn>0)rowsActive++;
+
+    const md=document.getElementById('mdots-'+r);
+    if(md) md.querySelectorAll('.md').forEach((d,l)=>d.classList.toggle('on',grid[r][l]));
+    const rcc=document.getElementById('rcc-'+r);
+    if(rcc) rcc.textContent=rowOn+'/6 ON';
+    const rc=document.getElementById('rc-'+r);
+    if(rc) rc.classList.toggle('lit',rowOn>0);
+
+    if(!pgDetail.classList.contains('gone')&&currentRow===r){
+      for(let l=0;l<LIGHTS;l++){
+        const lc=document.getElementById('lc-'+r+'-'+l);
+        if(lc){
+          lc.classList.toggle('on',grid[r][l]);
+          const btn=lc.querySelector('.lc-toggle');
+          if(btn) btn.textContent=grid[r][l]?'ON':'OFF';
+        }
+      }
+      updateRowStats(r);
+    }
+  }
+  // safe null-checked updates
+  const elOn=document.getElementById('statOn');
+  const elOff=document.getElementById('statOff');
+  const elRows=document.getElementById('statRows');
+  if(elOn) elOn.textContent=totalOn;
+  if(elOff) elOff.textContent=36-totalOn;
+  if(elRows) elRows.textContent=rowsActive;
+}
+
+function updateRowStats(r){
+  const on=grid[r].filter(Boolean).length;
+  const elOn=document.getElementById('rs-on');
+  const elOff=document.getElementById('rs-off');
+  if(elOn) elOn.textContent=on;
+  if(elOff) elOff.textContent=LIGHTS-on;
+}
+
+/* ── MQTT ── */
+function setMqtt(ok){
+  document.getElementById('mqttDot').className='mqtt-dot '+(ok?'ok':'err');
+  document.getElementById('mqttLabel').textContent=ok?'HiveMQ':'Offline';
+}
+
+/* ── API ── */
+async function apiPost(url,body){
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(7000)});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+function applyResp(d){
+  if(!d?.grid)return;
+  for(let r=0;r<ROWS;r++) for(let l=0;l<LIGHTS;l++) grid[r][l]=d.grid[r][l];
+  setMqtt(d.mqtt);applyGrid();
+}
+
+async function toggleLight(r,l){
+  if(busy)return;
+  const lc=document.getElementById('lc-'+r+'-'+l);
+  if(lc)lc.classList.add('busy');
+  busy=true;
+  try{applyResp(await apiPost('/api/light',{row:r,light:l,state:!grid[r][l]}));}
+  catch(e){console.error(e);setMqtt(false);}
+  finally{if(lc)lc.classList.remove('busy');busy=false;}
+}
+async function setRow(r,s){
+  if(busy)return;setBusy(true);
+  try{applyResp(await apiPost('/api/row',{row:r,state:s}));}
+  catch(e){console.error(e);setMqtt(false);}
+  finally{setBusy(false);}
+}
+async function setAll(s){
+  if(busy)return;setBusy(true);
+  try{applyResp(await apiPost('/api/all',{state:s}));}
+  catch(e){console.error(e);setMqtt(false);}
+  finally{setBusy(false);}
+}
+function setBusy(b){
+  busy=b;
+  ['btnAllOn','btnAllOff','btnRowOn','btnRowOff'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.disabled=b;
+  });
+}
+
+/* ── POLL ── */
+async function poll(){
+  try{
+    const r=await fetch('/api/grid',{signal:AbortSignal.timeout(4000)});
+    applyResp(await r.json());
+  }catch{setMqtt(false);}
+}
+
+/* ── EVENTS ── */
+document.getElementById('btnAllOn').addEventListener('click',()=>setAll(true));
+document.getElementById('btnAllOff').addEventListener('click',()=>setAll(false));
+document.getElementById('btnRowOn').addEventListener('click',()=>setRow(currentRow,true));
+document.getElementById('btnRowOff').addEventListener('click',()=>setRow(currentRow,false));
+
+/* ── INIT ── */
+buildRowsGrid();
+restoreState();  // restore page before first poll
+applyGrid();
+poll();
+setInterval(poll,4000);
+</script>
 </body>
 </html>
