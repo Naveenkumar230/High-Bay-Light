@@ -21,25 +21,39 @@ const HIVEMQ_CLIENT   = 'aipl-server-' + Math.random().toString(16).slice(2, 8);
 // ============================================================
 //  TOPIC HELPERS
 // ============================================================
-const TOPIC_CMD_SINGLE  = (r, l) => `aipl/row/${r}/light/${l}/command`;
-const TOPIC_CMD_ROW     = (r)    => `aipl/row/${r}/command`;
-const TOPIC_CMD_ALL     = ()     => `aipl/all/command`;
-const STATE_WILDCARD    = 'aipl/row/+/light/+/state';
-const TELE_WILDCARD     = 'aipl/row/+/light/+/telemetry';
+const TOPIC_CMD_SINGLE = (r, l) => `aipl/row/${r}/light/${l}/command`;
+const TOPIC_CMD_ROW    = (r)    => `aipl/row/${r}/command`;
+const TOPIC_CMD_ALL    = ()     => `aipl/all/command`;
+const STATE_WILDCARD   = 'aipl/row/+/light/+/state';
+const TELE_WILDCARD    = 'aipl/row/+/light/+/telemetry';
 
 // ============================================================
-//  IN-MEMORY GRID  [row 0-5][light 0-5]
-//  grid        = what the ESP32 is physically reporting
-//  userIntent  = what the USER last commanded (this is the source of truth)
+//  IN-MEMORY GRIDS
 //
-//  KEY FIX:
-//  When ESP32 reboots after MCB power cycle, it boots ON and
-//  publishes "ON" to the state topic. We detect that this
-//  contradicts the userIntent and immediately push the correct
-//  command back to the device.
+//  grid             = what the ESP32 physically reported
+//  userIntent       = what the USER last commanded (source of truth)
+//  correctionSent   = flag: did we already send a correction after last reboot?
+//  lastCorrection   = timestamp of when we sent the correction
+//
+//  WHY THE LOOP HAPPENED IN v2.1:
+//    1. ESP32 reboots → publishes "ON"
+//    2. Server sees mismatch → sends "OFF" after 2s
+//    3. ESP32 turns OFF → publishes "OFF"   ← triggers message handler again
+//    4. Server sees "OFF" vs userIntent(false) → thinks it's a NEW mismatch → sends "ON"
+//    5. Loop forever
+//
+//  THE FIX (v2.2):
+//    After sending a correction, set correctionSent[r][l] = true
+//    and block ALL further auto-corrections for 10 seconds (cooldown).
+//    The correction flag is only cleared when the USER manually
+//    sends a new command — never automatically.
 // ============================================================
-const grid       = Array.from({ length: 6 }, () => Array(6).fill(true));
-const userIntent = Array.from({ length: 6 }, () => Array(6).fill(true)); // last user command
+const grid             = Array.from({ length: 6 }, () => Array(6).fill(true));
+const userIntent       = Array.from({ length: 6 }, () => Array(6).fill(true));
+const correctionSent   = Array.from({ length: 6 }, () => Array(6).fill(false));
+const lastCorrection   = Array.from({ length: 6 }, () => Array(6).fill(0));
+
+const COOLDOWN_MS = 10000; // 10s cooldown after sending a correction
 
 // ============================================================
 //  MQTT CLIENT
@@ -55,12 +69,10 @@ const mqttClient = mqtt.connect(`mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`, {
 
 mqttClient.on('connect', () => {
   console.log('[MQTT] Connected to HiveMQ as', HIVEMQ_CLIENT);
-
   mqttClient.subscribe(STATE_WILDCARD, { qos: 1 }, (err) => {
     if (err) console.error('[MQTT] Subscribe error (state):', err.message);
     else     console.log('[MQTT] Subscribed to', STATE_WILDCARD);
   });
-
   mqttClient.subscribe(TELE_WILDCARD, { qos: 1 }, (err) => {
     if (err) console.error('[MQTT] Subscribe error (tele):', err.message);
     else     console.log('[MQTT] Subscribed to', TELE_WILDCARD);
@@ -69,11 +81,6 @@ mqttClient.on('connect', () => {
 
 // ============================================================
 //  INCOMING STATE FROM ESP32
-//  This is the KEY FIX:
-//  When the device publishes its state (e.g. ON after reboot),
-//  we compare it to userIntent. If they differ, we push the
-//  correct command back immediately — so the light matches
-//  whatever the user last set, even after a power cut.
 // ============================================================
 mqttClient.on('message', (topic, payload) => {
   const parts = topic.split('/');
@@ -90,36 +97,61 @@ mqttClient.on('message', (topic, payload) => {
     const light      = parseInt(parts[4], 10);
     const reportedOn = payload.toString().trim().toUpperCase() === 'ON';
 
-    if (row >= 0 && row < 6 && light >= 0 && light < 6) {
-      grid[row][light] = reportedOn;
+    if (row < 0 || row > 5 || light < 0 || light > 5) return;
 
-      const intended = userIntent[row][light];
+    // Always update the display grid
+    grid[row][light] = reportedOn;
 
-      if (reportedOn !== intended) {
-        // ── RESTORE: device state does not match user intent ──
-        // This happens when:
-        //   • MCB was cut and device rebooted → boots ON → user had set OFF
-        //   • OR device rebooted for any reason
+    const intended = userIntent[row][light];
+    const now      = Date.now();
+
+    // ── COOLDOWN CHECK ──
+    // If we already sent a correction recently, do NOT send another one.
+    // This is what stops the ON → OFF → ON → OFF loop.
+    if (correctionSent[row][light]) {
+      const elapsed = now - lastCorrection[row][light];
+      if (elapsed < COOLDOWN_MS) {
         console.log(
-          `[RESTORE] Row ${row+1} Light ${light+1} reported ${reportedOn ? 'ON' : 'OFF'} ` +
-          `but user intent is ${intended ? 'ON' : 'OFF'} → pushing correction`
+          `[COOLDOWN] Row ${row+1} Light ${light+1} → ignoring state report ` +
+          `(${Math.round(elapsed / 1000)}s into ${COOLDOWN_MS / 1000}s cooldown)`
         );
-
-        // Small delay so device has finished its boot sequence
-        setTimeout(() => {
-          publish(TOPIC_CMD_SINGLE(row, light), intended ? 'ON' : 'OFF')
-            .then(() => {
-              console.log(`[RESTORE] Correction sent → Row ${row+1} Light ${light+1} = ${intended ? 'ON' : 'OFF'}`);
-            })
-            .catch(e => {
-              console.error(`[RESTORE] Failed to send correction:`, e.message);
-            });
-        }, 2000); // 2 second delay — gives ESP32 time to finish connecting
-
+        return; // ← do nothing, wait for cooldown to expire
       } else {
-        console.log(`[STATE] Row ${row+1} Light ${light+1} → ${reportedOn ? 'ON' : 'OFF'} ✓ matches intent`);
+        // Cooldown expired — allow checking again
+        correctionSent[row][light] = false;
       }
     }
+
+    // ── MISMATCH CHECK ──
+    if (reportedOn !== intended) {
+      console.log(
+        `[RESTORE] Row ${row+1} Light ${light+1} reported ${reportedOn ? 'ON' : 'OFF'} ` +
+        `but user wants ${intended ? 'ON' : 'OFF'} → correcting in 2s`
+      );
+
+      // Lock correction flag IMMEDIATELY so any messages during the 2s
+      // wait don't trigger a second correction
+      correctionSent[row][light] = true;
+      lastCorrection[row][light] = now;
+
+      setTimeout(() => {
+        publish(TOPIC_CMD_SINGLE(row, light), intended ? 'ON' : 'OFF')
+          .then(() => {
+            grid[row][light] = intended; // optimistic update
+            console.log(`[RESTORE] ✓ Corrected → Row ${row+1} Light ${light+1} = ${intended ? 'ON' : 'OFF'}`);
+          })
+          .catch(e => {
+            console.error(`[RESTORE] Publish failed:`, e.message);
+            correctionSent[row][light] = false; // retry allowed on next state report
+          });
+      }, 2000);
+
+    } else {
+      // State already matches intent — no correction needed
+      correctionSent[row][light] = false;
+      console.log(`[STATE] Row ${row+1} Light ${light+1} → ${reportedOn ? 'ON' : 'OFF'} ✓ matches intent`);
+    }
+
     return;
   }
 
@@ -131,12 +163,13 @@ mqttClient.on('message', (topic, payload) => {
     parts[3] === 'light' &&
     parts[5] === 'telemetry'
   ) {
-    // Just log telemetry — extend here if you want to store metrics
     const row   = parseInt(parts[2], 10);
     const light = parseInt(parts[4], 10);
     try {
       const data = JSON.parse(payload.toString());
-      console.log(`[TELE] Row ${row+1} Light ${light+1} | uptime:${data.uptime_s}s rssi:${data.rssi}dBm kwh:${data.kwh_used}`);
+      console.log(
+        `[TELE] Row ${row+1} Light ${light+1} | uptime:${data.uptime_s}s rssi:${data.rssi}dBm kwh:${data.kwh_used}`
+      );
     } catch { /* ignore bad JSON */ }
   }
 });
@@ -169,13 +202,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 //  ROUTES
 // ============================================================
 
-// GET /api/grid — full 6×6 state snapshot
+// GET /api/grid
 app.get('/api/grid', (req, res) => {
   res.json({ grid, userIntent, mqtt: mqttClient.connected });
 });
 
-// POST /api/light — toggle / set a single light
-// Body: { row: 0-5, light: 0-5, state: true|false }
+// POST /api/light — single light
 app.post('/api/light', async (req, res) => {
   const { row, light, state } = req.body;
   if (row === undefined || light === undefined || state === undefined)
@@ -191,9 +223,9 @@ app.post('/api/light', async (req, res) => {
   try {
     await publish(TOPIC_CMD_SINGLE(r, l), s ? 'ON' : 'OFF');
 
-    // Save what the USER intended — this is used to restore after power cycle
-    userIntent[r][l] = s;
-    grid[r][l]       = s;  // optimistic
+    userIntent[r][l]     = s;     // save user intent
+    correctionSent[r][l] = false; // reset so next reboot gets fresh correction
+    grid[r][l]           = s;
 
     console.log(`[CMD] Row ${r+1} Light ${l+1} → ${s ? 'ON' : 'OFF'} (intent saved)`);
     res.json({ grid, userIntent, mqtt: mqttClient.connected });
@@ -203,8 +235,7 @@ app.post('/api/light', async (req, res) => {
   }
 });
 
-// POST /api/row — set all 6 lights in one row
-// Body: { row: 0-5, state: true|false }
+// POST /api/row — entire row
 app.post('/api/row', async (req, res) => {
   const { row, state } = req.body;
   if (row === undefined || state === undefined)
@@ -219,10 +250,10 @@ app.post('/api/row', async (req, res) => {
   try {
     await publish(TOPIC_CMD_ROW(r), s ? 'ON' : 'OFF');
 
-    // Save intent for all 6 lights in this row
     for (let l = 0; l < 6; l++) {
-      userIntent[r][l] = s;
-      grid[r][l]       = s;
+      userIntent[r][l]     = s;
+      correctionSent[r][l] = false;
+      grid[r][l]           = s;
     }
 
     console.log(`[CMD] Row ${r+1} ALL → ${s ? 'ON' : 'OFF'} (intent saved)`);
@@ -233,8 +264,7 @@ app.post('/api/row', async (req, res) => {
   }
 });
 
-// POST /api/all — all 36 lights at once
-// Body: { state: true|false }
+// POST /api/all — all 36 lights
 app.post('/api/all', async (req, res) => {
   const { state } = req.body;
   if (state === undefined)
@@ -245,11 +275,11 @@ app.post('/api/all', async (req, res) => {
   try {
     await publish(TOPIC_CMD_ALL(), s ? 'ON' : 'OFF');
 
-    // Save intent for all 36 lights
     for (let r = 0; r < 6; r++)
       for (let l = 0; l < 6; l++) {
-        userIntent[r][l] = s;
-        grid[r][l]       = s;
+        userIntent[r][l]     = s;
+        correctionSent[r][l] = false;
+        grid[r][l]           = s;
       }
 
     console.log(`[CMD] ALL LIGHTS → ${s ? 'ON' : 'OFF'} (intent saved)`);
@@ -260,7 +290,7 @@ app.post('/api/all', async (req, res) => {
   }
 });
 
-// GET /health — server + MQTT status
+// GET /health
 app.get('/health', (req, res) => {
   res.json({
     server:    'online',
@@ -286,21 +316,15 @@ setInterval(() => {
   });
 }, 5 * 60 * 1000);
 
-console.log('[KEEP-ALIVE] Self-ping enabled →', RENDER_URL);
-
 // ============================================================
 //  START
 // ============================================================
 app.listen(PORT, () => {
   console.log('\n╔════════════════════════════════════════════╗');
-  console.log('║  AIPL High Bay — HiveMQ Server v2.1        ║');
-  console.log('║  FIX: MCB power cycle restores user state  ║');
+  console.log('║  AIPL High Bay — HiveMQ Server v2.2        ║');
+  console.log('║  FIX: No more ON/OFF loop after MCB cycle  ║');
   console.log('╚════════════════════════════════════════════╝');
-  console.log(`\n  UI      : http://localhost:${PORT}`);
-  console.log(`  Grid    : http://localhost:${PORT}/api/grid`);
-  console.log(`  Health  : http://localhost:${PORT}/health`);
-  console.log(`\n  HiveMQ  : ${HIVEMQ_HOST}:${HIVEMQ_PORT}`);
-  console.log(`  User    : ${HIVEMQ_USERNAME}`);
-  console.log(`  Client  : ${HIVEMQ_CLIENT}`);
-  console.log(`  Render  : ${RENDER_URL || '(not set — local only)'}\n`);
+  console.log(`\n  UI     : http://localhost:${PORT}`);
+  console.log(`  Grid   : http://localhost:${PORT}/api/grid`);
+  console.log(`  Health : http://localhost:${PORT}/health\n`);
 });
