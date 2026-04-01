@@ -437,10 +437,18 @@ async function setRow(r,s){
   catch(e){console.error(e);setMqtt(false);}
   finally{setBusy(false);}
 }
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#e03535;color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;letter-spacing:2px;z-index:999;';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
 async function setAll(s){
   if(busy)return;setBusy(true);
   try{applyResp(await apiPost('/api/all',{state:s}));}
-  catch(e){console.error(e);setMqtt(false);}
+catch(e) { console.error(e); setMqtt(false); showToast('Command failed — check connection'); }
   finally{setBusy(false);}
 }
 function setBusy(b){
