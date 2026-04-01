@@ -10,7 +10,7 @@ const app     = express();
 const PORT    = process.env.PORT || 3000;
 
 // ============================================================
-//  HiveMQ Config — matches firmware exactly
+//  HiveMQ Config
 // ============================================================
 const HIVEMQ_HOST     = process.env.HIVEMQ_HOST     || 'a0d0d0e9332a4d3db7516f6125f6e677.s1.eu.hivemq.cloud';
 const HIVEMQ_PORT     = parseInt(process.env.HIVEMQ_PORT || '8883');
@@ -19,31 +19,27 @@ const HIVEMQ_PASSWORD = process.env.HIVEMQ_PASSWORD || 'Naveen235623@@';
 const HIVEMQ_CLIENT   = 'aipl-server-' + Math.random().toString(16).slice(2, 8);
 
 // ============================================================
-//  TOPIC HELPERS — must match firmware snprintf patterns exactly
-//
-//  Firmware publishes  : aipl/row/{R}/light/{L}/state      payload: ON | OFF
-//  Firmware subscribes : aipl/row/{R}/light/{L}/command    payload: ON | OFF
-//                        aipl/row/{R}/command              payload: ON | OFF
-//                        aipl/all/command                  payload: ON | OFF
-//
-//  Server subscribes   : aipl/row/+/light/+/state  (wildcard, all 36 devices)
-//  Server publishes    : command topics above
+//  TOPIC HELPERS
 // ============================================================
-const TOPIC_CMD_SINGLE = (r, l) => `aipl/row/${r}/light/${l}/command`;
-const TOPIC_CMD_ROW    = (r)    => `aipl/row/${r}/command`;
-const TOPIC_CMD_ALL    = ()     => `aipl/all/command`;
-const STATE_WILDCARD   = 'aipl/row/+/light/+/state';
+const TOPIC_CMD_SINGLE  = (r, l) => `aipl/row/${r}/light/${l}/command`;
+const TOPIC_CMD_ROW     = (r)    => `aipl/row/${r}/command`;
+const TOPIC_CMD_ALL     = ()     => `aipl/all/command`;
+const STATE_WILDCARD    = 'aipl/row/+/light/+/state';
+const TELE_WILDCARD     = 'aipl/row/+/light/+/telemetry';
 
 // ============================================================
 //  IN-MEMORY GRID  [row 0-5][light 0-5]
+//  grid        = what the ESP32 is physically reporting
+//  userIntent  = what the USER last commanded (this is the source of truth)
 //
-//  *** Default: true (ON) ***
-//  Because the firmware boots with light ON (fail-safe).
-//  If the server defaults to false but ESP32 is physically ON,
-//  the dashboard shows wrong state until the first MQTT message.
-//  Defaulting to true avoids that visual glitch.
+//  KEY FIX:
+//  When ESP32 reboots after MCB power cycle, it boots ON and
+//  publishes "ON" to the state topic. We detect that this
+//  contradicts the userIntent and immediately push the correct
+//  command back to the device.
 // ============================================================
-const grid = Array.from({ length: 6 }, () => Array(6).fill(true));
+const grid       = Array.from({ length: 6 }, () => Array(6).fill(true));
+const userIntent = Array.from({ length: 6 }, () => Array(6).fill(true)); // last user command
 
 // ============================================================
 //  MQTT CLIENT
@@ -52,25 +48,37 @@ const mqttClient = mqtt.connect(`mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`, {
   username:           HIVEMQ_USERNAME,
   password:           HIVEMQ_PASSWORD,
   clientId:           HIVEMQ_CLIENT,
-  rejectUnauthorized: true,   // verify HiveMQ TLS cert
-  reconnectPeriod:    3000,   // retry every 3s on disconnect
+  rejectUnauthorized: true,
+  reconnectPeriod:    3000,
   keepalive:          60,
 });
 
 mqttClient.on('connect', () => {
   console.log('[MQTT] Connected to HiveMQ as', HIVEMQ_CLIENT);
-  // Subscribe to ALL device state topics with wildcard
+
   mqttClient.subscribe(STATE_WILDCARD, { qos: 1 }, (err) => {
-    if (err) console.error('[MQTT] Subscribe error:', err.message);
+    if (err) console.error('[MQTT] Subscribe error (state):', err.message);
     else     console.log('[MQTT] Subscribed to', STATE_WILDCARD);
+  });
+
+  mqttClient.subscribe(TELE_WILDCARD, { qos: 1 }, (err) => {
+    if (err) console.error('[MQTT] Subscribe error (tele):', err.message);
+    else     console.log('[MQTT] Subscribed to', TELE_WILDCARD);
   });
 });
 
-// ── Incoming state from each ESP32 ─────────────────────────
+// ============================================================
+//  INCOMING STATE FROM ESP32
+//  This is the KEY FIX:
+//  When the device publishes its state (e.g. ON after reboot),
+//  we compare it to userIntent. If they differ, we push the
+//  correct command back immediately — so the light matches
+//  whatever the user last set, even after a power cut.
+// ============================================================
 mqttClient.on('message', (topic, payload) => {
-  // Expected topic: aipl/row/R/light/L/state
-  // parts:          [0]  [1] [2][3]   [4][5]
   const parts = topic.split('/');
+
+  // ── State topic: aipl/row/R/light/L/state ──
   if (
     parts.length === 6   &&
     parts[0] === 'aipl'  &&
@@ -78,14 +86,58 @@ mqttClient.on('message', (topic, payload) => {
     parts[3] === 'light' &&
     parts[5] === 'state'
   ) {
-    const row   = parseInt(parts[2], 10);
-    const light = parseInt(parts[4], 10);
-    const state = payload.toString().trim().toUpperCase() === 'ON';
+    const row        = parseInt(parts[2], 10);
+    const light      = parseInt(parts[4], 10);
+    const reportedOn = payload.toString().trim().toUpperCase() === 'ON';
 
     if (row >= 0 && row < 6 && light >= 0 && light < 6) {
-      grid[row][light] = state;
-      console.log(`[STATE] Row ${row+1} Light ${light+1} → ${state ? 'ON' : 'OFF'}`);
+      grid[row][light] = reportedOn;
+
+      const intended = userIntent[row][light];
+
+      if (reportedOn !== intended) {
+        // ── RESTORE: device state does not match user intent ──
+        // This happens when:
+        //   • MCB was cut and device rebooted → boots ON → user had set OFF
+        //   • OR device rebooted for any reason
+        console.log(
+          `[RESTORE] Row ${row+1} Light ${light+1} reported ${reportedOn ? 'ON' : 'OFF'} ` +
+          `but user intent is ${intended ? 'ON' : 'OFF'} → pushing correction`
+        );
+
+        // Small delay so device has finished its boot sequence
+        setTimeout(() => {
+          publish(TOPIC_CMD_SINGLE(row, light), intended ? 'ON' : 'OFF')
+            .then(() => {
+              console.log(`[RESTORE] Correction sent → Row ${row+1} Light ${light+1} = ${intended ? 'ON' : 'OFF'}`);
+            })
+            .catch(e => {
+              console.error(`[RESTORE] Failed to send correction:`, e.message);
+            });
+        }, 2000); // 2 second delay — gives ESP32 time to finish connecting
+
+      } else {
+        console.log(`[STATE] Row ${row+1} Light ${light+1} → ${reportedOn ? 'ON' : 'OFF'} ✓ matches intent`);
+      }
     }
+    return;
+  }
+
+  // ── Telemetry topic: aipl/row/R/light/L/telemetry ──
+  if (
+    parts.length === 6   &&
+    parts[0] === 'aipl'  &&
+    parts[1] === 'row'   &&
+    parts[3] === 'light' &&
+    parts[5] === 'telemetry'
+  ) {
+    // Just log telemetry — extend here if you want to store metrics
+    const row   = parseInt(parts[2], 10);
+    const light = parseInt(parts[4], 10);
+    try {
+      const data = JSON.parse(payload.toString());
+      console.log(`[TELE] Row ${row+1} Light ${light+1} | uptime:${data.uptime_s}s rssi:${data.rssi}dBm kwh:${data.kwh_used}`);
+    } catch { /* ignore bad JSON */ }
   }
 });
 
@@ -119,7 +171,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // GET /api/grid — full 6×6 state snapshot
 app.get('/api/grid', (req, res) => {
-  res.json({ grid, mqtt: mqttClient.connected });
+  res.json({ grid, userIntent, mqtt: mqttClient.connected });
 });
 
 // POST /api/light — toggle / set a single light
@@ -138,9 +190,13 @@ app.post('/api/light', async (req, res) => {
 
   try {
     await publish(TOPIC_CMD_SINGLE(r, l), s ? 'ON' : 'OFF');
-    grid[r][l] = s;   // optimistic — real state confirmed when ESP32 publishes back
-    console.log(`[CMD] Row ${r+1} Light ${l+1} → ${s ? 'ON' : 'OFF'}`);
-    res.json({ grid, mqtt: mqttClient.connected });
+
+    // Save what the USER intended — this is used to restore after power cycle
+    userIntent[r][l] = s;
+    grid[r][l]       = s;  // optimistic
+
+    console.log(`[CMD] Row ${r+1} Light ${l+1} → ${s ? 'ON' : 'OFF'} (intent saved)`);
+    res.json({ grid, userIntent, mqtt: mqttClient.connected });
   } catch (e) {
     console.error('[CMD] publish error:', e.message);
     res.status(503).json({ error: 'MQTT publish failed', detail: e.message });
@@ -161,11 +217,16 @@ app.post('/api/row', async (req, res) => {
     return res.status(400).json({ error: 'row out of range (0–5)' });
 
   try {
-    // One MQTT message → all 6 ESP32s in this row receive it
     await publish(TOPIC_CMD_ROW(r), s ? 'ON' : 'OFF');
-    for (let l = 0; l < 6; l++) grid[r][l] = s;
-    console.log(`[CMD] Row ${r+1} ALL → ${s ? 'ON' : 'OFF'}`);
-    res.json({ grid, mqtt: mqttClient.connected });
+
+    // Save intent for all 6 lights in this row
+    for (let l = 0; l < 6; l++) {
+      userIntent[r][l] = s;
+      grid[r][l]       = s;
+    }
+
+    console.log(`[CMD] Row ${r+1} ALL → ${s ? 'ON' : 'OFF'} (intent saved)`);
+    res.json({ grid, userIntent, mqtt: mqttClient.connected });
   } catch (e) {
     console.error('[CMD] publish error:', e.message);
     res.status(503).json({ error: 'MQTT publish failed', detail: e.message });
@@ -182,12 +243,17 @@ app.post('/api/all', async (req, res) => {
   const s = (state === true || state === 'true' || state === 1 || state === '1');
 
   try {
-    // One MQTT message → all 36 ESP32s receive it
     await publish(TOPIC_CMD_ALL(), s ? 'ON' : 'OFF');
+
+    // Save intent for all 36 lights
     for (let r = 0; r < 6; r++)
-      for (let l = 0; l < 6; l++) grid[r][l] = s;
-    console.log(`[CMD] ALL LIGHTS → ${s ? 'ON' : 'OFF'}`);
-    res.json({ grid, mqtt: mqttClient.connected });
+      for (let l = 0; l < 6; l++) {
+        userIntent[r][l] = s;
+        grid[r][l]       = s;
+      }
+
+    console.log(`[CMD] ALL LIGHTS → ${s ? 'ON' : 'OFF'} (intent saved)`);
+    res.json({ grid, userIntent, mqtt: mqttClient.connected });
   } catch (e) {
     console.error('[CMD] publish error:', e.message);
     res.status(503).json({ error: 'MQTT publish failed', detail: e.message });
@@ -213,13 +279,12 @@ const RENDER_URL = process.env.RENDER_URL || 'https://high-bay-light-73hq.onrend
 
 setInterval(() => {
   const https = require('https');
-  const url = `${RENDER_URL}/health`;
-  https.get(url, (res) => {
-    console.log('[KEEP-ALIVE] Ping OK →', url, '| Status:', res.statusCode);
+  https.get(`${RENDER_URL}/health`, (res) => {
+    console.log('[KEEP-ALIVE] Ping OK | Status:', res.statusCode);
   }).on('error', (e) => {
     console.warn('[KEEP-ALIVE] Ping failed:', e.message);
   });
-}, 5 * 60 * 1000); // every 5 minutes
+}, 5 * 60 * 1000);
 
 console.log('[KEEP-ALIVE] Self-ping enabled →', RENDER_URL);
 
@@ -228,7 +293,8 @@ console.log('[KEEP-ALIVE] Self-ping enabled →', RENDER_URL);
 // ============================================================
 app.listen(PORT, () => {
   console.log('\n╔════════════════════════════════════════════╗');
-  console.log('║  AIPL High Bay — HiveMQ Server v2.0        ║');
+  console.log('║  AIPL High Bay — HiveMQ Server v2.1        ║');
+  console.log('║  FIX: MCB power cycle restores user state  ║');
   console.log('╚════════════════════════════════════════════╝');
   console.log(`\n  UI      : http://localhost:${PORT}`);
   console.log(`  Grid    : http://localhost:${PORT}/api/grid`);
