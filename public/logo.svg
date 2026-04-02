@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" width="320" height="72">
+  <defs>
+    <radialGradient id="iconBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0e1a2e"/>
+      <stop offset="100%" stop-color="#060d1a"/>
+    </radialGradient>
+    <radialGradient id="lensL" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFDE0"/>
+      <stop offset="40%" stop-color="#F5C800"/>
+      <stop offset="100%" stop-color="#C89600"/>
+    </radialGradient>
+    <radialGradient id="beamL" cx="50%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="#F5C800" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#F5C800" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0055cc"/>
+      <stop offset="100%" stop-color="#0077ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ── Icon area (72×72 left square) ── -->
+  <!-- Background pill -->
+  <rect x="0" y="4" width="64" height="64" rx="14" fill="url(#iconBg)"/>
+
+  <!-- Beam -->
+  <polygon points="18,40 46,40 51,66 13,66" fill="url(#beamL)"/>
+  <!-- clip beam to icon -->
+  <rect x="0" y="0" width="64" height="72" fill="none"/>
+
+  <!-- Pipe -->
+  <rect x="29" y="9" width="6" height="8" rx="2" fill="#253448"/>
+
+  <!-- Top body -->
+  <rect x="13" y="16" width="38" height="8" rx="3" fill="#1c2d42"/>
+
+  <!-- Fins -->
+  <rect x="15" y="23" width="5" height="9" rx="1.5" fill="#0e1c2c"/>
+  <rect x="22" y="23" width="5" height="9" rx="1.5" fill="#0e1c2c"/>
+  <rect x="29" y="23" width="5" height="9" rx="1.5" fill="#0e1c2c"/>
+  <rect x="36" y="23" width="5" height="9" rx="1.5" fill="#0e1c2c"/>
+  <rect x="43" y="23" width="5" height="9" rx="1.5" fill="#0e1c2c"/>
+
+  <!-- Dome -->
+  <path d="M13 31 Q13 44 32 44 Q51 44 51 31 Z" fill="#111e2e"/>
+
+  <!-- Glow -->
+  <ellipse cx="32" cy="41" rx="13" ry="5" fill="#F5C800" opacity="0.14"/>
+
+  <!-- Lens -->
+  <ellipse cx="32" cy="40" rx="10" ry="4" fill="url(#lensL)"/>
+
+  <!-- Hot spot -->
+  <ellipse cx="32" cy="39.5" rx="5" ry="2" fill="#FFFFF0" opacity="0.88"/>
+
+  <!-- ── Wordmark ── -->
+  <!-- AIPL in bold -->
+  <text
+    x="80" y="44"
+    font-family="'Arial Black', 'Helvetica Neue', sans-serif"
+    font-weight="900"
+    font-size="32"
+    letter-spacing="6"
+    fill="url(#textGrad)">AIPL</text>
+
+  <!-- Divider line -->
+  <line x1="80" y1="50" x2="310" y2="50" stroke="#d8e4f0" stroke-width="0.8"/>
+
+  <!-- Subtitle -->
+  <text
+    x="80" y="63"
+    font-family="'Courier New', monospace"
+    font-weight="400"
+    font-size="10"
+    letter-spacing="4"
+    fill="#7799bb">HIGH BAY CONTROL</text>
+
+  <!-- Small version tag -->
+  <text
+    x="296" y="63"
+    font-family="'Courier New', monospace"
+    font-size="8"
+    letter-spacing="1"
+    fill="#b0c4d8"
+    text-anchor="end">IoT</text>
+</svg>

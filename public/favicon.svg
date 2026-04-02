@@ -1,15 +1,39 @@
-<svg width="200" height="210" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="200" rx="44" fill="#06090d" style="fill:rgb(6, 9, 13);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
-
-  <!-- outer glow ring (faint) -->
-  <circle cx="100" cy="100" r="68" fill="none" stroke="#f5c800" stroke-width="3" opacity="0.15" style="fill:none;stroke:rgb(245, 200, 0);color:rgb(255, 255, 255);stroke-width:3px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.15;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
-
-  <!-- arc of power symbol — gap at top -->
-  <path d="M 100 36&#10;           A 64 64 0 1 1 99.9 36" fill="none" stroke="#f5c800" stroke-width="14" stroke-linecap="round" stroke-dasharray="340 400" stroke-dashoffset="-30" style="fill:none;stroke:rgb(245, 200, 0);color:rgb(255, 255, 255);stroke-width:14px;stroke-dasharray:340px, 400px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
-
-  <!-- vertical stem -->
-  <line x1="100" y1="36" x2="100" y2="84" stroke="#f5c800" stroke-width="14" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(245, 200, 0);color:rgb(255, 255, 255);stroke-width:14px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
-
-  <!-- center dot glow -->
-  <circle cx="100" cy="100" r="6" fill="#f5c800" opacity="0.4" style="fill:rgb(245, 200, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.4;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0e1a2e"/>
+      <stop offset="100%" stop-color="#060d1a"/>
+    </radialGradient>
+    <radialGradient id="lens" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFDE0"/>
+      <stop offset="40%" stop-color="#F5C800"/>
+      <stop offset="100%" stop-color="#C89600"/>
+    </radialGradient>
+    <radialGradient id="beam" cx="50%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="#F5C800" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#F5C800" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
+  <polygon points="18,38 46,38 52,62 12,62" fill="url(#beam)">
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+  </polygon>
+  <rect x="29" y="6" width="6" height="9" rx="2" fill="#253448"/>
+  <rect x="14" y="14" width="36" height="8" rx="3" fill="#1c2d42"/>
+  <rect x="16" y="21" width="5" height="9" rx="1.5" fill="#111f30"/>
+  <rect x="23" y="21" width="5" height="9" rx="1.5" fill="#111f30"/>
+  <rect x="30" y="21" width="5" height="9" rx="1.5" fill="#111f30"/>
+  <rect x="37" y="21" width="5" height="9" rx="1.5" fill="#111f30"/>
+  <rect x="44" y="21" width="5" height="9" rx="1.5" fill="#111f30"/>
+  <path d="M14 29 Q14 43 32 43 Q50 43 50 29 Z" fill="#152035"/>
+  <ellipse cx="32" cy="39" rx="14" ry="6" fill="#F5C800">
+    <animate attributeName="opacity" values="0.08;0.22;0.08" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="rx" values="14;17;14" dur="2s" repeatCount="indefinite"/>
+  </ellipse>
+  <ellipse cx="32" cy="38" rx="10" ry="4.5" fill="url(#lens)">
+    <animate attributeName="opacity" values="0.85;1;0.85" dur="2s" repeatCount="indefinite"/>
+  </ellipse>
+  <ellipse cx="32" cy="37.5" rx="5" ry="2" fill="#FFFFF0" opacity="0.9">
+    <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite"/>
+  </ellipse>
 </svg>

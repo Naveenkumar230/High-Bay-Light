@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>AIPL · High Bay Control</title>
-<link rel="icon" type="image/png" href="/favicon.png"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -24,7 +24,6 @@
   --green:#00cc66;
   --radius:14px;
 
-  /* ON state — warm ivory/yellow */
   --on-bg:#fffef5;
   --on-border:rgba(212,168,0,0.45);
   --on-shadow:rgba(200,160,0,0.12);
@@ -37,7 +36,6 @@
   --on-toggle-bg:rgba(212,168,0,0.10);
   --on-toggle-border:rgba(212,168,0,0.40);
 
-  /* OFF state — cool grey */
   --off-bg:#f4f7fb;
   --off-border:#dce6f0;
   --off-top:#d0dcea;
@@ -97,7 +95,7 @@ header{
 @keyframes sor{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.5}}
 
 /* ── WRAP ── */
-.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:28px 20px 80px}
+.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:28px 20px 120px}
 .sec-label{font-size:9px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
 
@@ -166,7 +164,6 @@ header{
 /* ── LIGHTS GRID ── */
 .lights-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:480px){.lights-grid{grid-template-columns:repeat(3,1fr)}}
-
 .light-card{
   border-radius:var(--radius);
   padding:18px 14px 14px;cursor:pointer;
@@ -180,18 +177,8 @@ header{
 .light-card:nth-child(1){animation-delay:.04s}.light-card:nth-child(2){animation-delay:.08s}
 .light-card:nth-child(3){animation-delay:.12s}.light-card:nth-child(4){animation-delay:.16s}
 .light-card:nth-child(5){animation-delay:.20s}.light-card:nth-child(6){animation-delay:.24s}
-
-/* OFF state */
-.light-card{
-  background:var(--off-bg);
-  border-color:var(--off-border);
-}
-/* ON state */
-.light-card.on{
-  background:var(--on-bg);
-  border-color:var(--on-border);
-  box-shadow:0 3px 16px var(--on-shadow),0 1px 4px rgba(0,0,0,0.04);
-}
+.light-card{background:var(--off-bg);border-color:var(--off-border)}
+.light-card.on{background:var(--on-bg);border-color:var(--on-border);box-shadow:0 3px 16px var(--on-shadow),0 1px 4px rgba(0,0,0,0.04)}
 .light-card:hover{transform:translateY(-2px)}
 .light-card:active{transform:scale(.96)}
 .light-card.busy{pointer-events:none;opacity:.5}
@@ -200,56 +187,230 @@ header{
 .fixture{display:flex;flex-direction:column;align-items:center}
 .lc-pipe{width:5px;height:11px;background:#c8d8e8;border-radius:2px 2px 0 0}
 .lc-body{width:58px;display:flex;flex-direction:column;align-items:center}
-
 .lc-top{width:100%;height:10px;border-radius:3px 3px 0 0;transition:background .4s}
 .light-card.on .lc-top{background:var(--on-top)}
 .light-card:not(.on) .lc-top{background:var(--off-top)}
-
 .lc-fins{display:flex;gap:2px;padding:1px 5px;transition:background .4s}
 .light-card.on .lc-fins{background:var(--on-fins)}
 .light-card:not(.on) .lc-fins{background:var(--off-fins)}
-
 .lc-fin{width:5px;height:9px;border-radius:0 0 2px 2px;transition:background .4s}
 .light-card.on .lc-fin{background:var(--on-fin)}
 .light-card:not(.on) .lc-fin{background:var(--off-fin)}
-
 .lc-dome{width:100%;height:18px;border-radius:0 0 30px 30px;position:relative;overflow:hidden;transition:background .4s}
 .light-card.on .lc-dome{background:var(--on-top)}
 .light-card:not(.on) .lc-dome{background:var(--off-dome)}
-
 .lc-lens{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:40px;height:10px;border-radius:50%;transition:all .45s ease}
 .light-card:not(.on) .lc-lens{background:var(--off-lens)}
-.light-card.on .lc-lens{
-  background:radial-gradient(ellipse,#fffde0 0%,#f5c800 50%,transparent 100%);
-  box-shadow:0 0 14px 6px rgba(245,200,0,0.30),0 0 28px 10px rgba(245,200,0,0.12);
-}
-
+.light-card.on .lc-lens{background:radial-gradient(ellipse,#fffde0 0%,#f5c800 50%,transparent 100%);box-shadow:0 0 14px 6px rgba(245,200,0,0.30),0 0 28px 10px rgba(245,200,0,0.12)}
 .lc-beam{width:0;height:0;pointer-events:none;transition:all .5s ease}
-.light-card.on .lc-beam{
-  border-left:28px solid transparent;border-right:28px solid transparent;
-  border-top:56px solid rgba(245,200,0,0.06);
-}
-
+.light-card.on .lc-beam{border-left:28px solid transparent;border-right:28px solid transparent;border-top:56px solid rgba(245,200,0,0.06)}
 .lc-name{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:3px;transition:color .3s}
 .light-card:not(.on) .lc-name{color:var(--off-text)}
 .light-card.on .lc-name{color:var(--on-text)}
-
 .lc-state-row{display:flex;align-items:center;gap:8px;width:100%}
 .lc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:all .3s}
 .light-card:not(.on) .lc-dot{background:var(--off-dot)}
 .light-card.on .lc-dot{background:var(--green);box-shadow:0 0 6px rgba(0,204,102,.45)}
-
 .lc-toggle{flex:1;padding:7px 0;border-radius:6px;border-width:1px;border-style:solid;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:3px;cursor:pointer;transition:all .18s;text-align:center}
 .light-card:not(.on) .lc-toggle{background:transparent;border-color:var(--off-toggle-border);color:var(--off-text)}
 .light-card.on .lc-toggle{background:var(--on-toggle-bg);border-color:var(--on-toggle-border);color:var(--on-text)}
 .lc-toggle:active{transform:scale(.94)}
+
+/* ══════════════════════════════════════════════
+   VOICE CONTROL — floating widget
+══════════════════════════════════════════════ */
+#voiceWidget{
+  position:fixed;
+  bottom:28px;
+  right:24px;
+  z-index:500;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:12px;
+  pointer-events:none;
+}
+
+/* Expandable panel */
+#voicePanel{
+  pointer-events:all;
+  width:300px;
+  background:rgba(255,255,255,0.97);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:18px;
+  box-shadow:0 8px 32px rgba(0,60,120,0.14),0 2px 8px rgba(0,60,120,0.08);
+  transform:scale(0.92) translateY(12px);
+  opacity:0;
+  transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .22s ease;
+  transform-origin:bottom right;
+  display:none;
+}
+#voicePanel.open{
+  display:block;
+  animation:vcOpen .25s cubic-bezier(.4,0,.2,1) forwards;
+}
+#voicePanel.closing{
+  animation:vcClose .2s ease forwards;
+}
+@keyframes vcOpen{
+  from{opacity:0;transform:scale(.92) translateY(12px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+@keyframes vcClose{
+  from{opacity:1;transform:scale(1) translateY(0)}
+  to{opacity:0;transform:scale(.92) translateY(12px)}
+}
+
+.vc-panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.vc-title-wrap{}
+.vc-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:16px;letter-spacing:4px;color:var(--accent);
+}
+.vc-sub{
+  font-size:9px;letter-spacing:2px;color:var(--muted);
+  text-transform:uppercase;margin-top:1px;
+}
+.vc-close{
+  background:none;border:none;cursor:pointer;
+  color:var(--muted);font-size:20px;line-height:1;
+  padding:2px 6px;border-radius:5px;
+  transition:background .15s;
+}
+.vc-close:hover{background:var(--bg)}
+
+/* transcript box */
+.vc-transcript{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:9px;
+  padding:10px 13px;
+  min-height:42px;
+  font-size:12px;
+  color:var(--muted);
+  font-style:italic;
+  margin-bottom:10px;
+  line-height:1.5;
+  transition:border-color .2s;
+  word-break:break-word;
+}
+.vc-transcript.heard{
+  color:var(--white);
+  font-style:normal;
+  border-color:var(--border-hi);
+}
+
+/* result feedback */
+.vc-result{
+  font-size:11px;
+  letter-spacing:1px;
+  padding:8px 12px;
+  border-radius:8px;
+  margin-bottom:10px;
+  display:none;
+  line-height:1.5;
+}
+.vc-result.ok{
+  display:block;
+  background:rgba(0,180,90,0.10);
+  border:1px solid rgba(0,180,90,0.25);
+  color:#007a40;
+}
+.vc-result.fail{
+  display:block;
+  background:rgba(220,53,53,0.09);
+  border:1px solid rgba(220,53,53,0.22);
+  color:#a32020;
+}
+
+/* command hints */
+.vc-hints-label{
+  font-size:8px;letter-spacing:3px;color:var(--muted);
+  text-transform:uppercase;margin-bottom:7px;
+}
+.vc-hints{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.vc-hint{
+  font-size:10px;
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:7px;
+  padding:6px 9px;
+  color:var(--muted-hi);
+  line-height:1.4;
+}
+.vc-hint span{
+  display:block;
+  font-size:9px;
+  color:var(--muted);
+  margin-top:1px;
+}
+
+/* Mic FAB */
+#micFab{
+  pointer-events:all;
+  width:56px;height:56px;
+  border-radius:50%;
+  border:none;
+  background:var(--accent);
+  box-shadow:0 4px 18px rgba(0,85,204,0.35),0 2px 6px rgba(0,85,204,0.20);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,box-shadow .2s,transform .15s;
+  position:relative;
+}
+#micFab:hover{background:var(--accent-d);transform:scale(1.06)}
+#micFab:active{transform:scale(.94)}
+#micFab.listening{
+  background:#e03535;
+  box-shadow:0 4px 18px rgba(224,53,53,0.40),0 2px 6px rgba(224,53,53,0.20);
+  animation:micPulse 1.3s infinite;
+}
+@keyframes micPulse{
+  0%,100%{box-shadow:0 4px 18px rgba(224,53,53,0.40),0 0 0 0 rgba(224,53,53,0.35)}
+  50%{box-shadow:0 4px 18px rgba(224,53,53,0.40),0 0 0 10px rgba(224,53,53,0)}
+}
+#micFab svg{width:22px;height:22px;color:#fff;transition:transform .2s}
+
+/* listening ripple ring */
+#micFab::before{
+  content:'';
+  position:absolute;inset:-6px;
+  border-radius:50%;
+  border:2px solid rgba(224,53,53,0.3);
+  opacity:0;
+  transition:opacity .3s;
+}
+#micFab.listening::before{opacity:1;animation:ring 1.3s infinite .3s}
+@keyframes ring{
+  0%{transform:scale(.85);opacity:.5}
+  100%{transform:scale(1.3);opacity:0}
+}
+
+/* mic tooltip badge */
+.mic-badge{
+  position:absolute;
+  top:-6px;right:-6px;
+  background:#e03535;color:#fff;
+  font-size:8px;letter-spacing:1px;
+  padding:2px 5px;border-radius:10px;
+  font-family:'DM Mono',monospace;
+  opacity:0;transform:scale(.7);
+  transition:all .2s;
+  white-space:nowrap;
+  pointer-events:none;
+}
+#micFab.listening .mic-badge{opacity:1;transform:scale(1)}
 
 /* ── RESPONSIVE ── */
 @media(max-width:480px){
   header{padding:0 14px}
   .hbtn{padding:6px 10px;font-size:11px;letter-spacing:2px}
   .logo-text{font-size:18px}
-  .wrap{padding:20px 14px 60px}
+  .wrap{padding:20px 14px 120px}
   .stats-bar{flex-wrap:wrap}
   .stat{min-width:33.33%}
   .rows-grid{gap:10px}
@@ -259,6 +420,8 @@ header{
   .row-stats{gap:7px}
   .lights-grid{gap:10px}
   .light-card{padding:14px 10px 12px}
+  #voiceWidget{bottom:20px;right:16px}
+  #voicePanel{width:calc(100vw - 32px)}
 }
 @media(max-width:360px){
   .rows-grid{grid-template-columns:1fr 1fr}
@@ -270,9 +433,11 @@ header{
 <body>
 
 <header>
-  <div class="logo">
+  <!-- <div class="logo">
     <img src="/logo.png" alt="AIPL Logo" class="logo-img" onerror="this.style.display='none'"/>
-    <div class="logo-text">AIPL<small>HIGH BAY CONTROL</small></div>
+  </div> -->
+  <div class="logo">
+    <img src="/logo.svg" alt="AIPL Logo" class="logo-img" onerror="this.style.display='none'"/>
   </div>
   <div class="hdr-right">
     <div class="mqtt-status">
@@ -324,13 +489,61 @@ header{
     </div>
   </div>
 
+</div><!-- /.shell -->
+
+<!-- ══════════════════════════════════════════════
+     VOICE CONTROL WIDGET — fixed bottom-right
+══════════════════════════════════════════════ -->
+<div id="voiceWidget">
+
+  <!-- Expandable info panel -->
+  <div id="voicePanel">
+    <div class="vc-panel-head">
+      <div class="vc-title-wrap">
+        <div class="vc-title">Voice Control</div>
+        <div class="vc-sub" id="vcSub">Click mic · Speak clearly</div>
+      </div>
+      <button class="vc-close" id="vcClose">×</button>
+    </div>
+
+    <div class="vc-transcript" id="vcTranscript">
+      Say a command after tapping the mic…
+    </div>
+
+    <div class="vc-result" id="vcResult"></div>
+
+    <div class="vc-hints-label">Example Commands</div>
+    <div class="vc-hints">
+  <div class="vc-hint">"R1 L2 ON"<span>Row 1 Light 2 ON</span></div>
+  <div class="vc-hint">"R3 OFF"<span>All lights in Row 3 OFF</span></div>
+  <div class="vc-hint">"All ON"<span>All 36 lights ON</span></div>
+  <div class="vc-hint">"R5 L6 OFF"<span>Row 5 Light 6 OFF</span></div>
 </div>
+  </div>
+
+  <!-- Mic FAB -->
+  <button id="micFab" title="Voice command">
+    <div class="mic-badge">LISTENING</div>
+    <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>
+  </button>
+
+</div>
+
 
 <script>
 'use strict';
-const ROWS=6,LIGHTS=6;
+
+/* ══════════════════════════════════════════
+   GRID STATE
+══════════════════════════════════════════ */
+const ROWS=6, LIGHTS=6;
 const grid=Array.from({length:ROWS},()=>Array(LIGHTS).fill(true));
-let busy=false,currentRow=0,transitioning=false;
+let busy=false, currentRow=0, transitioning=false;
 const pgHome=document.getElementById('pgHome');
 const pgDetail=document.getElementById('pgDetail');
 
@@ -361,17 +574,17 @@ function restoreState(){
 /* ── NAVIGATION ── */
 function goToRow(r){
   if(transitioning)return;
-  transitioning=true;currentRow=r;
-  buildLightsGrid(r);updateRowStats(r);
+  transitioning=true; currentRow=r;
+  buildLightsGrid(r); updateRowStats(r);
   document.getElementById('dtTitle').textContent='ROW '+(r+1);
   pgDetail.classList.remove('gone');
   pgDetail.classList.add('sir');
   pgHome.classList.add('sol');
   pgDetail.addEventListener('animationend',function h(){
     pgDetail.removeEventListener('animationend',h);
-    pgDetail.classList.remove('sir');pgHome.classList.remove('sol');
-    pgHome.classList.add('gone');pgDetail.classList.add('active');
-    transitioning=false;saveState();
+    pgDetail.classList.remove('sir'); pgHome.classList.remove('sol');
+    pgHome.classList.add('gone'); pgDetail.classList.add('active');
+    transitioning=false; saveState();
     window.scrollTo({top:0,behavior:'instant'});
   });
 }
@@ -383,10 +596,10 @@ function goHome(){
   pgDetail.classList.add('sor');
   pgHome.addEventListener('animationend',function h(){
     pgHome.removeEventListener('animationend',h);
-    pgHome.classList.remove('sil');pgDetail.classList.remove('sor');
-    pgDetail.classList.add('gone');pgDetail.classList.remove('active');
+    pgHome.classList.remove('sil'); pgDetail.classList.remove('sor');
+    pgDetail.classList.add('gone'); pgDetail.classList.remove('active');
     pgHome.classList.add('active');
-    transitioning=false;saveState();
+    transitioning=false; saveState();
     window.scrollTo({top:0,behavior:'instant'});
   });
 }
@@ -394,10 +607,10 @@ document.getElementById('backBtn').addEventListener('click',goHome);
 
 /* ── BUILD HOME ── */
 function buildRowsGrid(){
-  const c=document.getElementById('rowsGrid');c.innerHTML='';
+  const c=document.getElementById('rowsGrid'); c.innerHTML='';
   for(let r=0;r<ROWS;r++){
     const el=document.createElement('div');
-    el.className='row-card lit';el.id='rc-'+r;
+    el.className='row-card lit'; el.id='rc-'+r;
     el.innerHTML=`
       <div class="rc-head">
         <div class="rc-num">ROW ${r+1}</div>
@@ -415,11 +628,11 @@ function buildRowsGrid(){
 
 /* ── BUILD LIGHTS ── */
 function buildLightsGrid(r){
-  const c=document.getElementById('lightsGrid');c.innerHTML='';
+  const c=document.getElementById('lightsGrid'); c.innerHTML='';
   for(let l=0;l<LIGHTS;l++){
     const on=grid[r][l];
     const el=document.createElement('div');
-    el.className='light-card'+(on?' on':'');el.id='lc-'+r+'-'+l;
+    el.className='light-card'+(on?' on':''); el.id='lc-'+r+'-'+l;
     el.innerHTML=`
       <div class="fixture">
         <div class="lc-pipe"></div>
@@ -445,11 +658,11 @@ function buildLightsGrid(r){
 
 /* ── APPLY GRID ── */
 function applyGrid(){
-  let totalOn=0,rowsActive=0;
+  let totalOn=0, rowsActive=0;
   for(let r=0;r<ROWS;r++){
     let rowOn=0;
     for(let l=0;l<LIGHTS;l++) if(grid[r][l]) rowOn++;
-    totalOn+=rowOn;if(rowOn>0)rowsActive++;
+    totalOn+=rowOn; if(rowOn>0)rowsActive++;
     const md=document.getElementById('mdots-'+r);
     if(md) md.querySelectorAll('.md').forEach((d,l)=>d.classList.toggle('on',grid[r][l]));
     const rcc=document.getElementById('rcc-'+r);
@@ -484,7 +697,7 @@ function updateRowStats(r){
   if(elOff) elOff.textContent=LIGHTS-on;
 }
 
-/* ── MQTT ── */
+/* ── MQTT DOT ── */
 function setMqtt(ok){
   document.getElementById('mqttDot').className='mqtt-dot '+(ok?'ok':'err');
   document.getElementById('mqttLabel').textContent=ok?'HiveMQ':'Offline';
@@ -499,7 +712,7 @@ async function apiPost(url,body){
 function applyResp(d){
   if(!d?.grid)return;
   for(let r=0;r<ROWS;r++) for(let l=0;l<LIGHTS;l++) grid[r][l]=d.grid[r][l];
-  setMqtt(d.mqtt);applyGrid();
+  setMqtt(d.mqtt); applyGrid();
 }
 
 async function toggleLight(r,l){
@@ -507,33 +720,33 @@ async function toggleLight(r,l){
   const lc=document.getElementById('lc-'+r+'-'+l);
   if(lc)lc.classList.add('busy');
   busy=true;
-  try{applyResp(await apiPost('/api/light',{row:r,light:l,state:!grid[r][l]}));}
-  catch(e){console.error(e);setMqtt(false);}
-  finally{if(lc)lc.classList.remove('busy');busy=false;}
+  try{ applyResp(await apiPost('/api/light',{row:r,light:l,state:!grid[r][l]})); }
+  catch(e){ console.error(e); setMqtt(false); }
+  finally{ if(lc)lc.classList.remove('busy'); busy=false; }
 }
 async function setRow(r,s){
-  if(busy)return;setBusy(true);
-  try{applyResp(await apiPost('/api/row',{row:r,state:s}));}
-  catch(e){console.error(e);setMqtt(false);}
-  finally{setBusy(false);}
+  if(busy)return; setBusy(true);
+  try{ applyResp(await apiPost('/api/row',{row:r,state:s})); }
+  catch(e){ console.error(e); setMqtt(false); }
+  finally{ setBusy(false); }
 }
 function showToast(msg){
   const t=document.createElement('div');
   t.textContent=msg;
-  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#e03535;color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;letter-spacing:2px;z-index:999;';
+  t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#e03535;color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;letter-spacing:2px;z-index:999;white-space:nowrap';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),3000);
 }
 async function setAll(s){
-  if(busy)return;setBusy(true);
-  try{applyResp(await apiPost('/api/all',{state:s}));}
-  catch(e){console.error(e);setMqtt(false);showToast('Command failed — check connection');}
-  finally{setBusy(false);}
+  if(busy)return; setBusy(true);
+  try{ applyResp(await apiPost('/api/all',{state:s})); }
+  catch(e){ console.error(e); setMqtt(false); showToast('Command failed — check connection'); }
+  finally{ setBusy(false); }
 }
 function setBusy(b){
   busy=b;
   ['btnAllOn','btnAllOff','btnRowOn','btnRowOff'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.disabled=b;
+    const el=document.getElementById(id); if(el)el.disabled=b;
   });
 }
 
@@ -542,14 +755,249 @@ async function poll(){
   try{
     const r=await fetch('/api/grid',{signal:AbortSignal.timeout(8000)});
     applyResp(await r.json());
-  }catch{setMqtt(false);}
+  }catch{ setMqtt(false); }
 }
 
-/* ── EVENTS ── */
+/* ── BUTTON EVENTS ── */
 document.getElementById('btnAllOn').addEventListener('click',()=>setAll(true));
 document.getElementById('btnAllOff').addEventListener('click',()=>setAll(false));
 document.getElementById('btnRowOn').addEventListener('click',()=>setRow(currentRow,true));
 document.getElementById('btnRowOff').addEventListener('click',()=>setRow(currentRow,false));
+
+
+/* ══════════════════════════════════════════
+   VOICE CONTROL
+══════════════════════════════════════════ */
+const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
+const micFab=document.getElementById('micFab');
+const voicePanel=document.getElementById('voicePanel');
+const vcClose=document.getElementById('vcClose');
+const vcTranscript=document.getElementById('vcTranscript');
+const vcResult=document.getElementById('vcResult');
+const vcSub=document.getElementById('vcSub');
+let vcRec=null, vcListening=false, panelOpen=false;
+
+/* ── Number word map — English + Hindi + Kannada ── */
+/* ── Number word map — English + Hindi + Kannada ── */
+const NUM_WORDS={
+  'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,
+  'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'paach':5,'chhe':6,'chha':6,
+  'ondu':1,'eradu':2,'mooru':3,'naalu':4,'aidu':5,'aaru':6
+};
+
+function wordToNum(word){
+  if(!word) return null;
+  const w=word.toLowerCase().trim();
+  if(NUM_WORDS[w]) return NUM_WORDS[w];
+  const n=parseInt(w,10);
+  return isNaN(n)?null:n;
+}
+
+/* ── Parse command from transcript ── */
+function parseVoiceCmd(text){
+  const raw=text.toLowerCase().trim();
+
+  // detect ON / OFF (must be explicit)
+  let state=null;
+  if(/(turn on|\bon\b|chalu|on karo|hasi|on maadi)/.test(raw))  state=true;
+if(/(turn off|\boff\b|\bof\b|band|bandh|off karo|of karo|nivi|off maadi)/.test(raw)) state=false;
+  if(state===null){
+    vcShowResult(false,'Please say ON or OFF — e.g. "R1 L2 ON"');
+    return null;
+  }
+
+  // detect "all"
+  const isAll=/(all|every|sabhi|ellaa|ella|sab)/.test(raw);
+
+  // extract R<n> and L<n> — handles "r1", "r 1", "r-1"
+  const rowMatch  = raw.match(/\br[\s\-]?(\d+)\b/);
+  const lightMatch= raw.match(/\bl[\s\-]?(\d+)\b/);
+
+  const rowNum  = rowMatch   ? parseInt(rowMatch[1],10)  : null;
+  const lightNum= lightMatch ? parseInt(lightMatch[1],10): null;
+
+  // ALL
+  if(isAll && rowNum===null && lightNum===null){
+    return{type:'all', state};
+  }
+
+  // R<n> only → whole row
+  if(rowNum!==null && lightNum===null){
+    const r=rowNum-1;
+    if(r<0||r>5){vcShowResult(false,'Row must be R1–R6. Heard: R'+rowNum); return null;}
+    return{type:'row', row:r, state};
+  }
+
+  // R<n> L<n> → single light
+  if(rowNum!==null && lightNum!==null){
+    const r=rowNum-1, l=lightNum-1;
+    if(r<0||r>5){vcShowResult(false,'Row must be R1–R6. Heard: R'+rowNum); return null;}
+    if(l<0||l>5){vcShowResult(false,'Light must be L1–L6. Heard: L'+lightNum); return null;}
+    return{type:'light', row:r, light:l, state};
+  }
+
+  // L<n> only — only valid if already on a row detail page
+  if(lightNum!==null && rowNum===null){
+    const l=lightNum-1;
+    if(l<0||l>5){vcShowResult(false,'Light must be L1–L6. Heard: L'+lightNum); return null;}
+    if(pgDetail.classList.contains('gone')){
+      vcShowResult(false,'Include the row — e.g. "R2 L3 ON"');
+      return null;
+    }
+    return{type:'light', row:currentRow, light:l, state};
+  }
+
+  vcShowResult(false,'Not understood. Try: "R1 L2 ON", "R3 OFF", "All OFF"');
+  return null;
+}
+
+/* ── Execute voice command ── */
+async function execVoiceCmd(cmd){
+  if(!cmd)return;
+  setBusy(true);
+  try{
+    let url, body, label;
+    if(cmd.type==='all'){
+      url='/api/all'; body={state:cmd.state};
+      label='All 36 lights → '+(cmd.state?'ON':'OFF');
+    } else if(cmd.type==='row'){
+      url='/api/row'; body={row:cmd.row,state:cmd.state};
+      label='Row '+(cmd.row+1)+' all lights → '+(cmd.state?'ON':'OFF');
+    } else {
+      url='/api/light'; body={row:cmd.row,light:cmd.light,state:cmd.state};
+      label='Row '+(cmd.row+1)+' · Light '+(cmd.light+1)+' → '+(cmd.state?'ON':'OFF');
+      // navigate to that row's page if not there already
+      if(pgDetail.classList.contains('gone')||currentRow!==cmd.row){
+        goToRow(cmd.row);
+      }
+    }
+    applyResp(await apiPost(url,body));
+    vcShowResult(true,'✓ Done — '+label);
+  } catch(e){
+    vcShowResult(false,'Command failed: '+e.message);
+  } finally{
+    setBusy(false);
+  }
+}
+
+/* ── UI helpers ── */
+function vcShowResult(ok,msg){
+  vcResult.className='vc-result '+(ok?'ok':'fail');
+  vcResult.textContent=msg;
+  setTimeout(()=>{ vcResult.className='vc-result'; },5000);
+}
+
+function openPanel(){
+  if(panelOpen)return;
+  panelOpen=true;
+  voicePanel.style.display='block';
+  voicePanel.classList.add('open');
+}
+function closePanel(){
+  if(!panelOpen)return;
+  panelOpen=false;
+  voicePanel.classList.add('closing');
+  voicePanel.addEventListener('animationend',function h(){
+    voicePanel.removeEventListener('animationend',h);
+    voicePanel.classList.remove('open','closing');
+    voicePanel.style.display='none';
+  });
+}
+
+vcClose.addEventListener('click',()=>{
+  if(vcListening){
+    vcListening=false;
+    vcRec.stop();
+  }
+  closePanel();
+});
+
+/* ── Mic FAB click ── */
+micFab.addEventListener('click',()=>{
+  if(!SpeechRec){
+    openPanel();
+    vcShowResult(false,'Web Speech API not supported. Use Chrome or Edge browser.');
+    return;
+  }
+  if(vcListening){
+    // user explicitly stopping
+    vcListening=false;
+    vcRec.stop();
+    return;
+  }
+  openPanel();
+  startListening();
+});
+
+/* ── Speech Recognition ── */
+function startListening(){
+  if(!SpeechRec) return;
+  vcRec=new SpeechRec();
+  vcRec.continuous=true;
+  vcRec.interimResults=true;
+  vcRec.lang='en-IN';
+
+  vcRec.onstart=()=>{
+    vcListening=true;
+    micFab.classList.add('listening');
+    vcSub.textContent='Listening... speak now';
+    vcTranscript.className='vc-transcript';
+    vcTranscript.textContent='🎤 Listening...';
+    vcResult.className='vc-result';
+  };
+
+  vcRec.onresult=(e)=>{
+    const interim=Array.from(e.results).map(r=>r[0].transcript).join('');
+    vcTranscript.className='vc-transcript heard';
+    vcTranscript.textContent='"'+interim+'"';
+    if(e.results[e.results.length-1].isFinal){
+      const final=e.results[e.results.length-1][0].transcript;
+      vcTranscript.textContent='"'+final+'"';
+
+      // stop listening if user says bye
+      if(/(^|\s)(bye|goodbye|stop|band karo|nilvisu)(\s|$)/i.test(final)){
+        vcListening=false;
+        vcRec.stop();
+        vcTranscript.textContent='👋 Stopped listening';
+        vcSub.textContent='Click mic · Speak clearly';
+        return;
+      }
+
+      const cmd=parseVoiceCmd(final);
+      execVoiceCmd(cmd);
+    }
+  };
+
+  vcRec.onerror=(e)=>{
+    if(e.error==='not-allowed'){
+      vcShowResult(false,'Microphone access denied. Please allow mic permission in your browser.');
+      vcListening=false;
+      micFab.classList.remove('listening');
+    } else if(e.error==='no-speech'){
+      // no-speech is normal during continuous listening — just ignore it
+    } else if(e.error==='network'){
+      vcShowResult(false,'Network error. Check your internet connection.');
+    } else {
+      vcShowResult(false,'Error: '+e.error+'. Try again.');
+    }
+  };
+
+  vcRec.onend=()=>{
+    // auto-restart unless user explicitly stopped
+    if(vcListening){
+      try{ vcRec.start(); }catch(e){}
+    } else {
+      micFab.classList.remove('listening');
+      vcSub.textContent='Click mic · Speak clearly';
+    }
+  };
+
+  try{
+    vcRec.start();
+  } catch(e){
+    vcShowResult(false,'Could not start microphone: '+e.message);
+  }
+}
 
 /* ── INIT ── */
 buildRowsGrid();

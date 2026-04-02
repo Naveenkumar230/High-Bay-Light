@@ -30,7 +30,7 @@
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_1";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_2";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_3";
-constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_4";
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_4";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_5";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_6";
 
@@ -47,8 +47,8 @@ constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_1/Light_4";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_2";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_3";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_4";
-// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_5";  // completed
-// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_6";
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_5"; 
+constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_6";    // completed
 
 // ── ROW 4 ──────────────────────────────────────────────────
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_1";
