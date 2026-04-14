@@ -219,11 +219,11 @@ header{
 /* ── HOME FOOTER ── */
 .home-footer{
   text-align:center;
-  font-size:10px;
-  letter-spacing:2px;
+  font-size:20px;
+  letter-spacing:10px;
   color:var(--muted);
-  margin-top:32px;
-  padding:16px 0 8px;
+  margin-top:40px;
+  padding:20px 0 8px;
   border-top:1px solid var(--border);
 }
  
@@ -542,6 +542,134 @@ header{
   .rows-grid{grid-template-columns:1fr 1fr}
   .mqtt-status{display:none}
   .logo-img{display:none}
+}
+/* ── Team Footer ── */
+.team-footer {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-top: 20px;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 12px rgba(0,60,120,0.06);
+}
+
+@media (min-width: 600px) {
+  .team-footer {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.team-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.team-section-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.team-cards-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.team-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.team-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(0,85,204,0.12);
+}
+
+.owner-card {
+  border-color: rgba(212,168,0,0.3);
+  background: rgba(212,168,0,0.04);
+}
+
+.owner-card:hover {
+  border-color: var(--on-accent);
+  box-shadow: 0 4px 16px rgba(212,168,0,0.15);
+}
+
+.team-avatar {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.team-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-position {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-email {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Home Footer ── */
+.home-footer {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-top: 32px;
+  padding: 16px 0 8px;
+  border-top: 1px solid var(--border);
 }
 </style>
 </head>
