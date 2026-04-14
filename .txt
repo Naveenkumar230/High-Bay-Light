@@ -1,0 +1,24 @@
+<div class="team-section">
+          <div class="team-section-title">👑 Owner</div>
+          <div class="team-card owner-card">
+            <img src="download (1).png" alt="Owner" class="team-avatar">
+            <div class="team-info">
+              <div class="team-name">Naveen Kumar A k </div>
+              <div class="team-position">Executive-R&D</div>
+              <div class="team-email">📧 naveenkumarak@aquarelleindia.com</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BNG CHAMPIONS -->
+        <div class="team-section">
+          <div class="team-section-title">🏆 BNG Champion</div>
+          <div class="team-cards-row">
+            <div class="team-card">
+              <img src="download.png" alt="BNG Champion 1" class="team-avatar">
+              <div class="team-info">
+                <div class="team-name">BHARATHI S</div>
+                <div class="team-position">Maintenance</div>
+                <div class="team-email">📧 maintenanceaipl3@aquarelleindia.com</div>
+              </div>
+            </div>

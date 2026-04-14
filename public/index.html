@@ -23,7 +23,7 @@
   --red:#e03535;
   --green:#00cc66;
   --radius:14px;
-
+ 
   --on-bg:#fffef5;
   --on-border:rgba(212,168,0,0.45);
   --on-shadow:rgba(200,160,0,0.12);
@@ -35,7 +35,7 @@
   --on-text:#a07800;
   --on-toggle-bg:rgba(212,168,0,0.10);
   --on-toggle-border:rgba(212,168,0,0.40);
-
+ 
   --off-bg:#f4f7fb;
   --off-border:#dce6f0;
   --off-top:#d0dcea;
@@ -54,7 +54,7 @@ body::before{
   background-image:linear-gradient(rgba(180,200,220,0.18) 1px,transparent 1px),linear-gradient(90deg,rgba(180,200,220,0.18) 1px,transparent 1px);
   background-size:40px 40px;pointer-events:none;z-index:0;
 }
-
+ 
 /* ── HEADER ── */
 header{
   position:sticky;top:0;z-index:200;
@@ -79,7 +79,7 @@ header{
 .hbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .hbtn.primary:hover{background:var(--accent-d)}
 .hbtn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
-
+ 
 /* ── PAGE SYSTEM ── */
 .shell{position:relative;overflow:hidden}
 .pg{position:absolute;inset:0;width:100%;will-change:transform}
@@ -93,12 +93,12 @@ header{
 @keyframes sol{from{transform:none;opacity:1}to{transform:translateX(-28%);opacity:0}}
 @keyframes sil{from{transform:translateX(-28%);opacity:0}to{transform:none;opacity:1}}
 @keyframes sor{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.5}}
-
+ 
 /* ── WRAP ── */
 .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:28px 20px 120px}
 .sec-label{font-size:9px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
-
+ 
 /* ── STATS BAR ── */
 .stats-bar{display:flex;margin-bottom:28px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;box-shadow:0 2px 12px rgba(0,60,120,0.06)}
 .stat{flex:1;padding:16px 18px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:5px}
@@ -106,7 +106,7 @@ header{
 .stat-lbl{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
 .stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--white)}
 .stat-val.hi{color:var(--accent)}
-
+ 
 /* ── ROW CARDS ── */
 .rows-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:640px){.rows-grid{grid-template-columns:repeat(3,1fr)}}
@@ -142,7 +142,7 @@ header{
 .rc-label{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
 .rc-arrow{font-size:16px;color:var(--muted);transition:transform .2s,color .2s}
 .row-card:hover .rc-arrow{transform:translateX(4px);color:var(--on-accent)}
-
+ 
 /* ── DETAIL TOPBAR ── */
 .detail-topbar{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
 .back-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:1px solid var(--border-hi);background:var(--surface);color:var(--muted-hi);font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;cursor:pointer;transition:all .18s;flex-shrink:0}
@@ -153,14 +153,14 @@ header{
 .dt-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:5px;color:var(--accent)}
 .dt-sub{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:1px}
 .dt-btns{display:flex;gap:8px;flex-shrink:0}
-
+ 
 /* ── ROW STATS ── */
 .row-stats{display:flex;gap:10px;margin-bottom:22px}
 .rs{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,60,120,0.05)}
 .rs-lbl{font-size:8px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
 .rs-val{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--white)}
 .rs-val.hi{color:var(--on-accent)}
-
+ 
 /* ── LIGHTS GRID ── */
 .lights-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:480px){.lights-grid{grid-template-columns:repeat(3,1fr)}}
@@ -182,7 +182,7 @@ header{
 .light-card:hover{transform:translateY(-2px)}
 .light-card:active{transform:scale(.96)}
 .light-card.busy{pointer-events:none;opacity:.5}
-
+ 
 /* fixture */
 .fixture{display:flex;flex-direction:column;align-items:center}
 .lc-pipe{width:5px;height:11px;background:#c8d8e8;border-radius:2px 2px 0 0}
@@ -215,7 +215,128 @@ header{
 .light-card:not(.on) .lc-toggle{background:transparent;border-color:var(--off-toggle-border);color:var(--off-text)}
 .light-card.on .lc-toggle{background:var(--on-toggle-bg);border-color:var(--on-toggle-border);color:var(--on-text)}
 .lc-toggle:active{transform:scale(.94)}
-
+ 
+/* ── HOME FOOTER ── */
+.home-footer{
+  text-align:center;
+  font-size:10px;
+  letter-spacing:2px;
+  color:var(--muted);
+  margin-top:32px;
+  padding:16px 0 8px;
+  border-top:1px solid var(--border);
+}
+ 
+/* ── Team Footer ── */
+.team-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-top: 20px;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 12px rgba(0,60,120,0.06);
+  justify-content: center;
+  overflow: hidden;
+  min-width: 0;
+}
+.team-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+.team-section-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.team-cards-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.team-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.team-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(0,85,204,0.12);
+}
+.owner-card {
+  border-color: rgba(212,168,0,0.3);
+  background: rgba(212,168,0,0.04);
+}
+.owner-card:hover {
+  border-color: var(--on-accent);
+  box-shadow: 0 4px 16px rgba(212,168,0,0.15);
+}
+.team-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+.team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+.team-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-position {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.team-email {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 768px) {
+  .team-footer { flex-direction: column; }
+  .team-cards-row { flex-direction: column; }
+  .team-section { min-width: 0; width: 100%; }
+}
+ 
 /* ══════════════════════════════════════════════
    VOICE CONTROL — floating widget
 ══════════════════════════════════════════════ */
@@ -230,7 +351,7 @@ header{
   gap:12px;
   pointer-events:none;
 }
-
+ 
 /* Expandable panel */
 #voicePanel{
   pointer-events:all;
@@ -261,12 +382,11 @@ header{
   from{opacity:1;transform:scale(1) translateY(0)}
   to{opacity:0;transform:scale(.92) translateY(12px)}
 }
-
+ 
 .vc-panel-head{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:14px;
 }
-.vc-title-wrap{}
 .vc-title{
   font-family:'Bebas Neue',sans-serif;
   font-size:16px;letter-spacing:4px;color:var(--accent);
@@ -282,8 +402,7 @@ header{
   transition:background .15s;
 }
 .vc-close:hover{background:var(--bg)}
-
-/* transcript box */
+ 
 .vc-transcript{
   background:var(--bg);
   border:1px solid var(--border);
@@ -303,8 +422,7 @@ header{
   font-style:normal;
   border-color:var(--border-hi);
 }
-
-/* result feedback */
+ 
 .vc-result{
   font-size:11px;
   letter-spacing:1px;
@@ -326,8 +444,7 @@ header{
   border:1px solid rgba(220,53,53,0.22);
   color:#a32020;
 }
-
-/* command hints */
+ 
 .vc-hints-label{
   font-size:8px;letter-spacing:3px;color:var(--muted);
   text-transform:uppercase;margin-bottom:7px;
@@ -348,7 +465,7 @@ header{
   color:var(--muted);
   margin-top:1px;
 }
-
+ 
 /* Mic FAB */
 #micFab{
   pointer-events:all;
@@ -374,8 +491,7 @@ header{
   50%{box-shadow:0 4px 18px rgba(224,53,53,0.40),0 0 0 10px rgba(224,53,53,0)}
 }
 #micFab svg{width:22px;height:22px;color:#fff;transition:transform .2s}
-
-/* listening ripple ring */
+ 
 #micFab::before{
   content:'';
   position:absolute;inset:-6px;
@@ -389,8 +505,7 @@ header{
   0%{transform:scale(.85);opacity:.5}
   100%{transform:scale(1.3);opacity:0}
 }
-
-/* mic tooltip badge */
+ 
 .mic-badge{
   position:absolute;
   top:-6px;right:-6px;
@@ -404,7 +519,7 @@ header{
   pointer-events:none;
 }
 #micFab.listening .mic-badge{opacity:1;transform:scale(1)}
-
+ 
 /* ── RESPONSIVE ── */
 @media(max-width:480px){
   header{padding:0 14px}
@@ -433,9 +548,6 @@ header{
 <body>
 
 <header>
-  <!-- <div class="logo">
-    <img src="/logo.png" alt="AIPL Logo" class="logo-img" onerror="this.style.display='none'"/>
-  </div> -->
   <div class="logo">
     <img src="/logo.svg" alt="AIPL Logo" class="logo-img" onerror="this.style.display='none'"/>
   </div>
@@ -461,8 +573,53 @@ header{
         <div class="stat"><div class="stat-lbl">Rows Active</div><div class="stat-val" id="statRows">6</div></div>
       </div>
       <div class="rows-grid" id="rowsGrid"></div>
-    </div>
-  </div>
+      <!-- TEAM FOOTER -->
+      <div class="team-footer">
+
+        <!-- OWNER -->
+        <div class="team-section">
+          <div class="team-section-title">👑 Owner</div>
+          <div class="team-card owner-card">
+            <img src="download (1).png" alt="Owner" class="team-avatar">
+            <div class="team-info">
+              <div class="team-name">Naveen Kumar A k </div>
+              <div class="team-position">Executive-R&D</div>
+              <div class="team-email">📧 naveenkumarak@aquarelleindia.com</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BNG CHAMPIONS -->
+        <div class="team-section">
+          <div class="team-section-title">🏆 BNG Champion</div>
+          <div class="team-cards-row">
+            <div class="team-card">
+              <img src="download.png" alt="BNG Champion 1" class="team-avatar">
+              <div class="team-info">
+                <div class="team-name">BHARATHI S</div>
+                <div class="team-position">Maintenance</div>
+                <div class="team-email">📧 maintenanceaipl3@aquarelleindia.com</div>
+              </div>
+            </div>
+            <!-- <div class="team-card">
+              <img src="YOUR_BNG2_IMAGE.png" alt="BNG Champion 2" class="team-avatar">
+              <div class="team-info">
+                <div class="team-name">YOUR BNG NAME 2</div>
+                <div class="team-position">YOUR BNG POSITION 2</div>
+                <div class="team-email">📧 YOUR_BNG2_EMAIL@company.com</div>
+              </div>
+            </div> -->
+          </div>
+        </div>
+        <!-- ── FOOTER — correctly inside .wrap, after rows-grid ── -->
+      <div class="home-footer">
+        High Bay - Light &nbsp;·&nbsp; All times in IST &nbsp;·&nbsp;
+        &copy; 2026 Aquarelle India Pvt. Ltd. All rights reserved.
+      </div>
+
+      </div><!-- /.team-footer -->
+    </div><!-- /.wrap -->
+  </div><!-- /#pgHome -->
 
   <!-- ROW DETAIL PAGE -->
   <div class="pg gone" id="pgDetail">
@@ -491,12 +648,9 @@ header{
 
 </div><!-- /.shell -->
 
-<!-- ══════════════════════════════════════════════
-     VOICE CONTROL WIDGET — fixed bottom-right
-══════════════════════════════════════════════ -->
+<!-- ── VOICE CONTROL WIDGET — fixed bottom-right (contains ONLY the panel + FAB) ── -->
 <div id="voiceWidget">
 
-  <!-- Expandable info panel -->
   <div id="voicePanel">
     <div class="vc-panel-head">
       <div class="vc-title-wrap">
@@ -514,14 +668,13 @@ header{
 
     <div class="vc-hints-label">Example Commands</div>
     <div class="vc-hints">
-  <div class="vc-hint">"R1 L2 ON"<span>Row 1 Light 2 ON</span></div>
-  <div class="vc-hint">"R3 OFF"<span>All lights in Row 3 OFF</span></div>
-  <div class="vc-hint">"All ON"<span>All 36 lights ON</span></div>
-  <div class="vc-hint">"R5 L6 OFF"<span>Row 5 Light 6 OFF</span></div>
-</div>
+      <div class="vc-hint">"R1 L2 ON"<span>Row 1 Light 2 ON</span></div>
+      <div class="vc-hint">"R3 OFF"<span>All lights in Row 3 OFF</span></div>
+      <div class="vc-hint">"All ON"<span>All 36 lights ON</span></div>
+      <div class="vc-hint">"R5 L6 OFF"<span>Row 5 Light 6 OFF</span></div>
+    </div>
   </div>
 
-  <!-- Mic FAB -->
   <button id="micFab" title="Voice command">
     <div class="mic-badge">LISTENING</div>
     <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -532,8 +685,7 @@ header{
     </svg>
   </button>
 
-</div>
-
+</div><!-- /#voiceWidget -->
 
 <script>
 'use strict';
@@ -764,7 +916,6 @@ document.getElementById('btnAllOff').addEventListener('click',()=>setAll(false))
 document.getElementById('btnRowOn').addEventListener('click',()=>setRow(currentRow,true));
 document.getElementById('btnRowOff').addEventListener('click',()=>setRow(currentRow,false));
 
-
 /* ══════════════════════════════════════════
    VOICE CONTROL
 ══════════════════════════════════════════ */
@@ -777,8 +928,6 @@ const vcResult=document.getElementById('vcResult');
 const vcSub=document.getElementById('vcSub');
 let vcRec=null, vcListening=false, panelOpen=false;
 
-/* ── Number word map — English + Hindi + Kannada ── */
-/* ── Number word map — English + Hindi + Kannada ── */
 const NUM_WORDS={
   'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,
   'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'paach':5,'chhe':6,'chha':6,
@@ -793,50 +942,35 @@ function wordToNum(word){
   return isNaN(n)?null:n;
 }
 
-/* ── Parse command from transcript ── */
 function parseVoiceCmd(text){
   const raw=text.toLowerCase().trim();
-
-  // detect ON / OFF (must be explicit)
   let state=null;
   if(/(turn on|\bon\b|chalu|on karo|hasi|on maadi)/.test(raw))  state=true;
-if(/(turn off|\boff\b|\bof\b|band|bandh|off karo|of karo|nivi|off maadi)/.test(raw)) state=false;
+  if(/(turn off|\boff\b|\bof\b|band|bandh|off karo|of karo|nivi|off maadi)/.test(raw)) state=false;
   if(state===null){
     vcShowResult(false,'Please say ON or OFF — e.g. "R1 L2 ON"');
     return null;
   }
-
-  // detect "all"
   const isAll=/(all|every|sabhi|ellaa|ella|sab)/.test(raw);
-
-  // extract R<n> and L<n> — handles "r1", "r 1", "r-1"
   const rowMatch  = raw.match(/\br[\s\-]?(\d+)\b/);
   const lightMatch= raw.match(/\bl[\s\-]?(\d+)\b/);
-
   const rowNum  = rowMatch   ? parseInt(rowMatch[1],10)  : null;
   const lightNum= lightMatch ? parseInt(lightMatch[1],10): null;
 
-  // ALL
   if(isAll && rowNum===null && lightNum===null){
     return{type:'all', state};
   }
-
-  // R<n> only → whole row
   if(rowNum!==null && lightNum===null){
     const r=rowNum-1;
     if(r<0||r>5){vcShowResult(false,'Row must be R1–R6. Heard: R'+rowNum); return null;}
     return{type:'row', row:r, state};
   }
-
-  // R<n> L<n> → single light
   if(rowNum!==null && lightNum!==null){
     const r=rowNum-1, l=lightNum-1;
     if(r<0||r>5){vcShowResult(false,'Row must be R1–R6. Heard: R'+rowNum); return null;}
     if(l<0||l>5){vcShowResult(false,'Light must be L1–L6. Heard: L'+lightNum); return null;}
     return{type:'light', row:r, light:l, state};
   }
-
-  // L<n> only — only valid if already on a row detail page
   if(lightNum!==null && rowNum===null){
     const l=lightNum-1;
     if(l<0||l>5){vcShowResult(false,'Light must be L1–L6. Heard: L'+lightNum); return null;}
@@ -846,12 +980,10 @@ if(/(turn off|\boff\b|\bof\b|band|bandh|off karo|of karo|nivi|off maadi)/.test(r
     }
     return{type:'light', row:currentRow, light:l, state};
   }
-
   vcShowResult(false,'Not understood. Try: "R1 L2 ON", "R3 OFF", "All OFF"');
   return null;
 }
 
-/* ── Execute voice command ── */
 async function execVoiceCmd(cmd){
   if(!cmd)return;
   setBusy(true);
@@ -866,7 +998,6 @@ async function execVoiceCmd(cmd){
     } else {
       url='/api/light'; body={row:cmd.row,light:cmd.light,state:cmd.state};
       label='Row '+(cmd.row+1)+' · Light '+(cmd.light+1)+' → '+(cmd.state?'ON':'OFF');
-      // navigate to that row's page if not there already
       if(pgDetail.classList.contains('gone')||currentRow!==cmd.row){
         goToRow(cmd.row);
       }
@@ -880,7 +1011,6 @@ async function execVoiceCmd(cmd){
   }
 }
 
-/* ── UI helpers ── */
 function vcShowResult(ok,msg){
   vcResult.className='vc-result '+(ok?'ok':'fail');
   vcResult.textContent=msg;
@@ -912,7 +1042,6 @@ vcClose.addEventListener('click',()=>{
   closePanel();
 });
 
-/* ── Mic FAB click ── */
 micFab.addEventListener('click',()=>{
   if(!SpeechRec){
     openPanel();
@@ -920,7 +1049,6 @@ micFab.addEventListener('click',()=>{
     return;
   }
   if(vcListening){
-    // user explicitly stopping
     vcListening=false;
     vcRec.stop();
     return;
@@ -929,7 +1057,6 @@ micFab.addEventListener('click',()=>{
   startListening();
 });
 
-/* ── Speech Recognition ── */
 function startListening(){
   if(!SpeechRec) return;
   vcRec=new SpeechRec();
@@ -953,8 +1080,6 @@ function startListening(){
     if(e.results[e.results.length-1].isFinal){
       const final=e.results[e.results.length-1][0].transcript;
       vcTranscript.textContent='"'+final+'"';
-
-      // stop listening if user says bye
       if(/(^|\s)(bye|goodbye|stop|band karo|nilvisu)(\s|$)/i.test(final)){
         vcListening=false;
         vcRec.stop();
@@ -962,7 +1087,6 @@ function startListening(){
         vcSub.textContent='Click mic · Speak clearly';
         return;
       }
-
       const cmd=parseVoiceCmd(final);
       execVoiceCmd(cmd);
     }
@@ -974,7 +1098,7 @@ function startListening(){
       vcListening=false;
       micFab.classList.remove('listening');
     } else if(e.error==='no-speech'){
-      // no-speech is normal during continuous listening — just ignore it
+      // ignore
     } else if(e.error==='network'){
       vcShowResult(false,'Network error. Check your internet connection.');
     } else {
@@ -983,7 +1107,6 @@ function startListening(){
   };
 
   vcRec.onend=()=>{
-    // auto-restart unless user explicitly stopped
     if(vcListening){
       try{ vcRec.start(); }catch(e){}
     } else {
