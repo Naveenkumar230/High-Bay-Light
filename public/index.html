@@ -521,28 +521,79 @@ header{
 #micFab.listening .mic-badge{opacity:1;transform:scale(1)}
  
 /* ── RESPONSIVE ── */
-@media(max-width:480px){
-  header{padding:0 14px}
-  .hbtn{padding:6px 10px;font-size:11px;letter-spacing:2px}
-  .logo-text{font-size:18px}
-  .wrap{padding:20px 14px 120px}
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  header{
+    flex-wrap:wrap;
+    height:auto;
+    padding:10px 14px;
+    gap:8px;
+  }
+  .logo{
+    flex:1;
+  }
+  .logo-text{font-size:18px;letter-spacing:3px}
+
+  /* mqtt dot stays next to logo on mobile */
+  .mqtt-status{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-size:8px;
+  }
+
+  /* buttons row wraps to second line, full width */
+  .hdr-right{
+    width:100%;
+    display:flex;
+    gap:6px;
+    flex-wrap:nowrap;
+  }
+
+  /* DEVICE INFO hidden on small screens — saves space */
+  .hdr-right a.hbtn{
+    display:none;
+  }
+
+  /* ALL OFF and ALL ON share the row equally */
+  .hdr-right .hbtn{
+    flex:1;
+    text-align:center;
+    padding:7px 6px;
+    font-size:11px;
+    letter-spacing:1.5px;
+  }
+
+  .wrap{padding:16px 12px 120px}
   .stats-bar{flex-wrap:wrap}
   .stat{min-width:33.33%}
-  .rows-grid{gap:10px}
-  .row-card{padding:14px 12px}
-  .dt-title{font-size:22px}
+  .rows-grid{gap:8px}
+  .row-card{padding:12px 10px}
+  .rc-num{font-size:22px}
+  .dt-title{font-size:20px}
   .dt-btns .hbtn:first-child{display:none}
-  .row-stats{gap:7px}
-  .lights-grid{gap:10px}
-  .light-card{padding:14px 10px 12px}
-  #voiceWidget{bottom:20px;right:16px}
-  #voicePanel{width:calc(100vw - 32px)}
+  .row-stats{gap:6px}
+  .lights-grid{gap:8px}
+  .light-card{padding:12px 8px 10px}
+  #voiceWidget{bottom:20px;right:14px}
+  #voicePanel{width:calc(100vw - 28px)}
 }
-@media(max-width:360px){
+
+@media(max-width:400px){
+  .logo-text small{display:none}
+  .logo-img{height:26px}
   .rows-grid{grid-template-columns:1fr 1fr}
-  .mqtt-status{display:none}
-  .logo-img{display:none}
+  .stat{min-width:50%}
+  .stat:last-child{min-width:100%;border-top:1px solid var(--border)}
 }
+
+/* ── TABLET (601px – 768px) ── */
+@media(min-width:601px) and (max-width:768px){
+  header{padding:0 18px;gap:10px}
+  .hbtn{padding:6px 11px;font-size:12px;letter-spacing:2px}
+  .logo-text{font-size:20px}
+}
+
 /* ── Team Footer ── */
 .team-footer {
   display: grid;
@@ -683,20 +734,18 @@ header{
 </head>
 <body>
 
+<!-- REPLACE your existing <header> with this -->
 <header>
   <div class="logo">
     <img src="/logo.svg" alt="AIPL Logo" class="logo-img" onerror="this.style.display='none'"/>
+    <div class="logo-text">AIPL<small>High Bay Control</small></div>
   </div>
-  <div class="hdr-right">
-  <!-- ADD THIS BUTTON -->
-  <a class="hbtn" href="deviceinfo.html" title="System Architecture">
-    ⚙ DEVICE INFO
-  </a>
   <div class="hdr-right">
     <div class="mqtt-status">
       <div class="mqtt-dot" id="mqttDot"></div>
       <span id="mqttLabel">Connecting</span>
     </div>
+    <a class="hbtn" href="deviceinfo.html" title="System Architecture">⚙ DEVICE INFO</a>
     <button class="hbtn" id="btnAllOff">ALL OFF</button>
     <button class="hbtn primary" id="btnAllOn">ALL ON</button>
   </div>
