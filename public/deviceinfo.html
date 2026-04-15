@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AIPL · System Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0f4f8;font-family:'Space Grotesk',sans-serif;color:#1e293b;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:40px 20px}
+.download-btn{position:fixed;top:20px;right:20px;background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;z-index:999;transition:background .2s}
+.download-btn:hover{background:#1d4ed8}
+
+/* ── CARD ── */
+#infographic{
+  width:900px;max-width:100%;
+  background:#ffffff;
+  border:1px solid #cbd5e1;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 4px 32px rgba(30,64,175,0.08);
+}
+
+/* ── TOP IMAGE BANNER ── */
+.img-banner{
+  width:100%;
+  max-height:340px;
+  overflow:hidden;
+  position:relative;
+  border-bottom:1px solid #e2e8f0;
+}
+.img-banner img{
+  width:100%;
+  height:340px;
+  object-fit:cover;
+  object-position:center top;
+  display:block;
+}
+.img-banner-overlay{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  background:linear-gradient(0deg,rgba(255,255,255,0.92) 0%,transparent 100%);
+  padding:18px 32px 12px;
+  display:flex;
+  align-items:flex-end;
+  gap:10px;
+}
+.img-caption{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#2563eb;text-transform:uppercase;font-weight:700}
+
+/* ── HEADER ── */
+.hdr{
+  background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 100%);
+  padding:32px 40px 24px;
+  border-bottom:1px solid #e2e8f0;
+  position:relative;overflow:hidden;
+}
+.hdr::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(59,130,246,0.10),transparent 70%);
+}
+.hdr-tag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:3px;color:#2563eb;text-transform:uppercase;margin-bottom:10px}
+.hdr-title{font-size:26px;font-weight:700;letter-spacing:0.5px;color:#0f172a;line-height:1.2}
+.hdr-title span{color:#2563eb}
+.hdr-sub{font-size:13px;color:#64748b;margin-top:8px;letter-spacing:.3px}
+.hdr-badges{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.badge{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;border-radius:5px;letter-spacing:1px}
+.b-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+.b-teal{background:#ccfbf1;color:#0f766e;border:1px solid #99f6e4}
+.b-gold{background:#fef9c3;color:#a16207;border:1px solid #fde68a}
+.b-red{background:#fee2e2;color:#dc2626;border:1px solid #fecaca}
+
+.body{padding:32px 40px}
+
+/* ── SECTION LABEL ── */
+.sec{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:4px;color:#94a3b8;text-transform:uppercase;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.sec::after{content:'';flex:1;height:1px;background:#e2e8f0}
+
+/* ── COMPONENTS ── */
+.comps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:36px}
+.comp{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.comp::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.comp.esp::before{background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+.comp.relay::before{background:linear-gradient(90deg,#ef4444,#f97316)}
+.comp.psu::before{background:linear-gradient(90deg,#f59e0b,#eab308)}
+.comp-ico{font-size:24px;margin-bottom:12px}
+.comp-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;padding:3px 8px;border-radius:4px;margin-bottom:10px;display:inline-block}
+.esp .comp-tag{background:#dbeafe;color:#1d4ed8}
+.relay .comp-tag{background:#fee2e2;color:#dc2626}
+.psu .comp-tag{background:#fef9c3;color:#a16207}
+.comp-name{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px}
+.comp-model{font-family:'JetBrains Mono',monospace;font-size:10px;color:#94a3b8;margin-bottom:12px}
+.comp-rows{display:flex;flex-direction:column;gap:5px}
+.comp-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#ffffff;border:1px solid #f1f5f9;border-radius:5px}
+.comp-k{font-size:9px;letter-spacing:1px;color:#94a3b8;text-transform:uppercase}
+.comp-v{font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155}
+.comp-v.ok{color:#16a34a}
+.comp-v.warn{color:#dc2626}
+.comp-v.gold{color:#d97706}
+
+/* ── FLOW ── */
+.flow-wrap{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:22px;margin-bottom:36px}
+.flow-row{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:nowrap;overflow-x:auto}
+.flow-node{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:90px;flex-shrink:0}
+.flow-ico{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid #e2e8f0}
+.flow-ico.blue{background:#dbeafe}
+.flow-ico.teal{background:#ccfbf1}
+.flow-ico.purple{background:#ede9fe}
+.flow-ico.gold{background:#fef9c3}
+.flow-ico.red{background:#fee2e2}
+.flow-ico.green{background:#dcfce7}
+.flow-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:#94a3b8;text-align:center;letter-spacing:1px;text-transform:uppercase}
+.flow-arr{color:#cbd5e1;font-size:22px;flex-shrink:0;padding:0 4px;margin-bottom:14px}
+.flow-arr.back{color:#16a34a}
+
+/* ── MQTT ── */
+.mqtt-table{width:100%;border-collapse:collapse;margin-bottom:36px}
+.mqtt-table thead tr{background:#f1f5f9}
+.mqtt-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#94a3b8;padding:10px 14px;text-align:left;border-bottom:1px solid #e2e8f0;text-transform:uppercase}
+.mqtt-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#475569;vertical-align:middle}
+.mqtt-table tr:hover td{background:#f8fafc}
+.mqtt-table tr:last-child td{border-bottom:none}
+.topic-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:#2563eb}
+.dir{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 7px;border-radius:4px}
+.dir.sub{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+.dir.pub{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.dir.rpc{background:#fef9c3;color:#a16207;border:1px solid #fde68a}
+
+/* ── TELEMETRY ── */
+.telem{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.telem-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px}
+.telem-ico{font-size:18px}
+.telem-k{font-family:'JetBrains Mono',monospace;font-size:9px;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.telem-v{font-size:16px;font-weight:700;color:#2563eb}
+.telem-desc{font-size:10px;color:#94a3b8;margin-top:2px}
+
+/* ── FAILSAFE ── */
+.failsafe{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:0}
+.failsafe-ico{font-size:20px;flex-shrink:0}
+.failsafe-txt{font-size:11px;line-height:1.7;color:#78350f}
+.failsafe-txt strong{color:#dc2626;font-weight:600}
+
+/* ── FOOTER ── */
+.ftr{padding:18px 40px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;justify-content:space-between;align-items:center}
+.ftr-left{font-family:'JetBrains Mono',monospace;font-size:9px;color:#94a3b8;letter-spacing:2px}
+.ftr-right{font-family:'JetBrains Mono',monospace;font-size:9px;color:#94a3b8;letter-spacing:1px}
+
+@media(max-width:700px){
+  .comps{grid-template-columns:1fr}
+  .telem{grid-template-columns:1fr 1fr}
+  .body{padding:20px}
+  .hdr{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+
+<!-- <button class="download-btn"> Back </button> -->
+
+<div id="infographic">
+
+  <!-- TOP DETAILED IMAGE BANNER -->
+  <div class="img-banner">
+    <img src="info.png" alt="AIPL System Architecture Detailed View" />
+    <div class="img-banner-overlay">
+      <span class="img-caption">System Architecture &amp; Data Flow · Detailed Diagram (v8.0)</span>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-tag">AIPL · Smart Light Controller</div>
+    <div class="hdr-title">AUTOMATED <span>HIGH BAY</span><br>CONTROLLER — v8.0</div>
+    <div class="hdr-sub">One click in Bangalore controls a light in a railway facility via internet — no local IP needed</div>
+    <div class="hdr-badges">
+      <span class="badge b-blue">ESP32-WROOM-32U</span>
+      <span class="badge b-teal">HiveMQ MQTT</span>
+      <span class="badge b-gold">ThingsBoard Cloud</span>
+      <span class="badge b-red">Fail-Safe NC Relay</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- SECTION 1: COMPONENTS -->
+    <div class="sec">Section 1 — Key PCB Components</div>
+    <div class="comps">
+
+      <div class="comp esp">
+        <div class="comp-ico">🧠</div>
+        <div class="comp-tag">CONTROL CORE</div>
+        <div class="comp-name">ESP32-WROOM-32U</div>
+        <div class="comp-model">Dual-Core 240 MHz · 4MB Flash · Wi-Fi + BT</div>
+        <div class="comp-rows">
+          <div class="comp-row"><span class="comp-k">Firmware</span><span class="comp-v ok">v8.0 STABLE</span></div>
+          <div class="comp-row"><span class="comp-k">Relay Pin</span><span class="comp-v">GPIO 26</span></div>
+          <div class="comp-row"><span class="comp-k">WiFi Band</span><span class="comp-v">2.4 GHz 802.11</span></div>
+          <div class="comp-row"><span class="comp-k">Logic</span><span class="comp-v">3.3V DC</span></div>
+          <div class="comp-row"><span class="comp-k">Storage</span><span class="comp-v">Preferences API (NVM)</span></div>
+        </div>
+      </div>
+
+      <div class="comp relay">
+        <div class="comp-ico">⚡</div>
+        <div class="comp-tag">FAIL-SAFE SWITCH</div>
+        <div class="comp-name">JQC3F-05VDC-C Relay</div>
+        <div class="comp-model">Coil: 5V DC · Contacts: 10A / 250V AC</div>
+        <div class="comp-rows">
+          <div class="comp-row"><span class="comp-k">COM → NO</span><span class="comp-v warn">LIGHT OFF</span></div>
+          <div class="comp-row"><span class="comp-k">COM → NC</span><span class="comp-v ok">LIGHT ON (default)</span></div>
+          <div class="comp-row"><span class="comp-k">Coil</span><span class="comp-v">5V DC</span></div>
+          <div class="comp-row"><span class="comp-k">Drive</span><span class="comp-v">Active LOW via NPN</span></div>
+          <div class="comp-row"><span class="comp-k">WiFi Drop</span><span class="comp-v ok">Auto → NC (ON)</span></div>
+        </div>
+      </div>
+
+      <div class="comp psu">
+        <div class="comp-ico">🔌</div>
+        <div class="comp-tag">POWER MODULE</div>
+        <div class="comp-name">HI-LINK HLK-PM01</div>
+        <div class="comp-model">AC-DC Isolated Converter · 3W</div>
+        <div class="comp-rows">
+          <div class="comp-row"><span class="comp-k">Input</span><span class="comp-v">85–264V AC</span></div>
+          <div class="comp-row"><span class="comp-k">Output</span><span class="comp-v gold">5V DC / 600mA</span></div>
+          <div class="comp-row"><span class="comp-k">Efficiency</span><span class="comp-v ok">~79%</span></div>
+          <div class="comp-row"><span class="comp-k">Isolation</span><span class="comp-v">3000V AC</span></div>
+          <div class="comp-row"><span class="comp-k">Cert</span><span class="comp-v">CE · UL · FCC</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SECTION 2: FLOW -->
+    <div class="sec">Section 2 — Control Data Flow</div>
+    <div class="flow-wrap">
+      <div class="flow-row">
+        <div class="flow-node">
+          <div class="flow-ico blue">🖥️</div>
+          <div class="flow-lbl">User<br>Dashboard</div>
+        </div>
+        <div class="flow-arr">→</div>
+        <div class="flow-node">
+          <div class="flow-ico teal">☁️</div>
+          <div class="flow-lbl">Things<br>Board</div>
+        </div>
+        <div class="flow-arr">→</div>
+        <div class="flow-node">
+          <div class="flow-ico purple">📡</div>
+          <div class="flow-lbl">HiveMQ<br>Broker</div>
+        </div>
+        <div class="flow-arr">→</div>
+        <div class="flow-node">
+          <div class="flow-ico blue">🧠</div>
+          <div class="flow-lbl">ESP32<br>MCU</div>
+        </div>
+        <div class="flow-arr">→</div>
+        <div class="flow-node">
+          <div class="flow-ico red">⚡</div>
+          <div class="flow-lbl">Relay<br>Switch</div>
+        </div>
+        <div class="flow-arr">→</div>
+        <div class="flow-node">
+          <div class="flow-ico gold">💡</div>
+          <div class="flow-lbl">150W<br>High Bay</div>
+        </div>
+        <div class="flow-arr back">←</div>
+        <div class="flow-node">
+          <div class="flow-ico green">📊</div>
+          <div class="flow-lbl">Telemetry<br>Feedback</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: TELEMETRY -->
+    <div class="sec">Section 3 — Live Telemetry Published</div>
+    <div class="telem">
+      <div class="telem-card">
+        <div class="telem-ico">💡</div>
+        <div>
+          <div class="telem-k">state</div>
+          <div class="telem-v">true / false</div>
+          <div class="telem-desc">Light on/off — on every change</div>
+        </div>
+      </div>
+      <div class="telem-card">
+        <div class="telem-ico">⚡</div>
+        <div>
+          <div class="telem-k">kwh_used</div>
+          <div class="telem-v">0.00 kWh</div>
+          <div class="telem-desc">On-time × 0.15 kW cumulative</div>
+        </div>
+      </div>
+      <div class="telem-card">
+        <div class="telem-ico">📶</div>
+        <div>
+          <div class="telem-k">rssi</div>
+          <div class="telem-v">−44 dBm</div>
+          <div class="telem-desc">WiFi signal — every 30 sec</div>
+        </div>
+      </div>
+      <div class="telem-card">
+        <div class="telem-ico">⏱</div>
+        <div>
+          <div class="telem-k">uptime_s</div>
+          <div class="telem-v">87420 s</div>
+          <div class="telem-desc">Seconds since last boot (NVM)</div>
+        </div>
+      </div>
+      <div class="telem-card">
+        <div class="telem-ico">🌐</div>
+        <div>
+          <div class="telem-k">ip</div>
+          <div class="telem-v">192.168.x.x</div>
+          <div class="telem-desc">Local IP — device attribute</div>
+        </div>
+      </div>
+      <div class="telem-card">
+        <div class="telem-ico">🔖</div>
+        <div>
+          <div class="telem-k">fw_ver</div>
+          <div class="telem-v">v8.0</div>
+          <div class="telem-desc">Firmware — OTA tracking</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: MQTT TOPICS -->
+    <div class="sec">Section 4 — MQTT Topics &amp; RPC Methods</div>
+    <table class="mqtt-table">
+      <thead>
+        <tr>
+          <th>Dir</th>
+          <th>Topic / Method</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="dir sub">SUB</span></td>
+          <td><span class="topic-name">v1/devices/me/rpc/request/+</span></td>
+          <td>Receive setLight / setRow / setAll commands</td>
+        </tr>
+        <tr>
+          <td><span class="dir pub">PUB</span></td>
+          <td><span class="topic-name">v1/devices/me/rpc/response/{id}</span></td>
+          <td>ACK command back to ThingsBoard</td>
+        </tr>
+        <tr>
+          <td><span class="dir pub">PUB</span></td>
+          <td><span class="topic-name">v1/devices/me/telemetry</span></td>
+          <td>state · kwh_used · rssi · uptime_s</td>
+        </tr>
+        <tr>
+          <td><span class="dir pub">PUB</span></td>
+          <td><span class="topic-name">v1/devices/me/attributes</span></td>
+          <td>lightState · ip · fw_ver on boot</td>
+        </tr>
+        <tr>
+          <td><span class="dir rpc">RPC</span></td>
+          <td><span class="topic-name">setLight / setRow / setAll</span></td>
+          <td>Toggle 1 light · 1 row · all 36 lights</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- FAIL-SAFE -->
+    <div class="failsafe">
+      <div class="failsafe-ico">🛡️</div>
+      <div class="failsafe-txt">
+        <strong>FAIL-SAFE GUARANTEE —</strong>
+        If WiFi disconnects, MQTT times out, or ESP32 reboots — the JQC3F relay automatically de-energizes.
+        The Normally Closed (NC) contact closes, restoring AC power to the light.
+        <strong>Light always defaults to ON</strong> when communication is lost — facility is never left in darkness.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="ftr">
+    <div class="ftr-left">AIPL SMART LIGHT CONTROLLER v8.0 · ESP32-WROOM-32U · HIVEMQ · THINGSBOARD</div>
+    <div class="ftr-right">© 2026 AQUARELLE INDIA PVT. LTD.</div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+async function downloadImage(){
+  const btn = document.querySelector('.download-btn');
+  btn.textContent = '⏳ Generating...';
+  btn.disabled = true;
+  try {
+    const el = document.getElementById('infographic');
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true,
+      logging: false
+    });
+    const link = document.createElement('a');
+    link.download = 'AIPL_System_Architecture_v8_White.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    btn.textContent = '✅ Downloaded!';
+    setTimeout(()=>{ btn.textContent='⬇ Download Image'; btn.disabled=false; }, 2000);
+  } catch(e) {
+    btn.textContent = '⬇ Download Image';
+    btn.disabled = false;
+    alert('Download failed. Try right-clicking the infographic and saving as image.');
+  }
+}
+</script>
+</body>
+</html>
