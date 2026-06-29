@@ -48,14 +48,14 @@
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_3";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_4";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_5"; 
-constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_6";    // completed
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_6";   
 
 // ── ROW 4 ──────────────────────────────────────────────────
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_1";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_2";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_3";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_4";
-// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_5";
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_5"; // completed 
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_4/Light_6";
 
 // ── ROW 5 ──────────────────────────────────────────────────
@@ -68,11 +68,13 @@ constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_3/Light_6";    // completed
 
 // ── ROW 6 ──────────────────────────────────────────────────
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_1";
-// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_2";
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_2"; //ups
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_3";
 // constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_4";
-// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_5";
-// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_6";
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_5"; //samudra
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_6"; //samudra
+// constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_7";
+constexpr const char* DEVICE_ID = "AIPL/HighBay/Row_6/Light_8";
 
 // ── Parse ROW_INDEX and LIGHT_INDEX from DEVICE_ID at compile time ──
 #define ROW_INDEX   (DEVICE_ID[17] - '1')

@@ -43,8 +43,7 @@ const STATE_WILDCARD   = 'aipl/row/+/light/+/state';
 //  the dashboard shows wrong state until the first MQTT message.
 //  Defaulting to true avoids that visual glitch.
 // ============================================================
-const grid = Array.from({ length: 6 }, () => Array(6).fill(true));
-
+const grid = Array.from({ length: 6 }, (_, r) => Array(r === 5 ? 8 : 6).fill(true));
 // ============================================================
 //  MQTT CLIENT
 // ============================================================
@@ -82,8 +81,9 @@ mqttClient.on('message', (topic, payload) => {
     const light = parseInt(parts[4], 10);
     const state = payload.toString().trim().toUpperCase() === 'ON';
 
-    if (row >= 0 && row < 6 && light >= 0 && light < 6) {
-      grid[row][light] = state;
+const maxL = (row === 5) ? 8 : 6;
+if (row >= 0 && row < 6 && light >= 0 && light < maxL) {     
+   grid[row][light] = state;
       console.log(`[STATE] Row ${row+1} Light ${light+1} → ${state ? 'ON' : 'OFF'}`);
     }
   }
@@ -133,12 +133,13 @@ app.post('/api/light', async (req, res) => {
   const l = parseInt(light, 10);
   const s = (state === true || state === 'true' || state === 1 || state === '1');
 
-  if (isNaN(r) || r < 0 || r > 5 || isNaN(l) || l < 0 || l > 5)
-    return res.status(400).json({ error: 'row/light out of range (0–5)' });
+  const maxLight = (r === 5) ? 7 : 5;
+  if (isNaN(r) || r < 0 || r > 5 || isNaN(l) || l < 0 || l > maxLight)
+    return res.status(400).json({ error: 'row/light out of range' });
 
   try {
     await publish(TOPIC_CMD_SINGLE(r, l), s ? 'ON' : 'OFF');
-    grid[r][l] = s;   // optimistic — real state confirmed when ESP32 publishes back
+    grid[r][l] = s;
     console.log(`[CMD] Row ${r+1} Light ${l+1} → ${s ? 'ON' : 'OFF'}`);
     res.json({ grid, mqtt: mqttClient.connected });
   } catch (e) {
@@ -185,7 +186,7 @@ app.post('/api/all', async (req, res) => {
     // One MQTT message → all 36 ESP32s receive it
     await publish(TOPIC_CMD_ALL(), s ? 'ON' : 'OFF');
     for (let r = 0; r < 6; r++)
-      for (let l = 0; l < 6; l++) grid[r][l] = s;
+  for (let l = 0; l < (r === 5 ? 8 : 6); l++) grid[r][l] = s;
     console.log(`[CMD] ALL LIGHTS → ${s ? 'ON' : 'OFF'}`);
     res.json({ grid, mqtt: mqttClient.connected });
   } catch (e) {

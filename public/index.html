@@ -730,6 +730,70 @@ header{
   padding: 16px 0 8px;
   border-top: 1px solid var(--border);
 }
+.samudra-badge {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: #0ea5e9;
+  background: rgba(14,165,233,0.10);
+  border: 1px solid rgba(14,165,233,0.30);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 3px;
+  text-align: center;
+}
+.light-card.samudra-light {
+  border-color: rgba(14,165,233,0.35) !important;
+}
+.light-card.samudra-light.on {
+  box-shadow: 0 3px 16px rgba(14,165,233,0.18), 0 1px 4px rgba(0,0,0,0.04);
+}
+/* ── SAMUDRA — Template B: Ocean Card ── */
+.light-card.samudra-light {
+  border-color: #0891b2 !important;
+  border-width: 2px !important;
+  background: #f0fafb !important;
+  position: relative;
+}
+.light-card.samudra-light::before {
+  content: '🌊 SAMUDRA ZONE';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, #0e7490, #0891b2);
+  color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-align: center;
+  padding: 4px 0;
+  border-radius: 13px 13px 0 0;
+  pointer-events: none;
+}
+.light-card.samudra-light.on {
+  border-color: #06b6d4 !important;
+  background: linear-gradient(160deg, #e0f9ff, #f0fffe) !important;
+  box-shadow: 0 4px 24px rgba(8,145,178,0.25), 0 1px 4px rgba(0,0,0,0.04);
+}
+/* push fixture down so the top stripe doesn't overlap it */
+.light-card.samudra-light .fixture {
+  margin-top: 14px;
+}
+.samudra-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: #0e7490;
+  background: #cffafe;
+  border: 1.5px solid #67e8f9;
+  border-radius: 20px;
+  padding: 2px 9px;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+.samudra-badge::before { content: '🌊'; font-size: 9px; }
 </style>
 </head>
 <body>
@@ -764,7 +828,7 @@ header{
   <!-- HOME PAGE -->
   <div class="pg active" id="pgHome">
     <div class="wrap">
-      <div class="sec-label">Facility Grid — 6 Rows × 6 Lights</div>
+      <div class="sec-label">Facility Grid — 6 Rows × 8 Lights</div>
       <div class="stats-bar">
         <div class="stat"><div class="stat-lbl">Lights ON</div><div class="stat-val hi" id="statOn">36</div></div>
         <div class="stat"><div class="stat-lbl">Lights OFF</div><div class="stat-val" id="statOff">0</div></div>
@@ -891,8 +955,9 @@ header{
 /* ══════════════════════════════════════════
    GRID STATE
 ══════════════════════════════════════════ */
-const ROWS=6, LIGHTS=6;
-const grid=Array.from({length:ROWS},()=>Array(LIGHTS).fill(true));
+const ROWS=6;
+const ROW_LIGHTS = [6,6,6,6,6,8];
+const grid=Array.from({length:ROWS},(_,r)=>Array(ROW_LIGHTS[r]).fill(true));
 let busy=false, currentRow=0, transitioning=false;
 const pgHome=document.getElementById('pgHome');
 const pgDetail=document.getElementById('pgDetail');
@@ -962,11 +1027,11 @@ function buildRowsGrid(){
     const el=document.createElement('div');
     el.className='row-card lit'; el.id='rc-'+r;
     el.innerHTML=`
-      <div class="rc-head">
-        <div class="rc-num">ROW ${r+1}</div>
-        <div class="rc-chip" id="rcc-${r}">6/6 ON</div>
-      </div>
-      <div class="mini-dots" id="mdots-${r}">${Array(6).fill('<div class="md on"></div>').join('')}</div>
+  <div class="rc-head">
+    <div class="rc-num">ROW ${r+1}</div>
+    <div class="rc-chip" id="rcc-${r}">${ROW_LIGHTS[r]}/${ROW_LIGHTS[r]} ON</div>
+  </div>
+  <div class="mini-dots" id="mdots-${r}">${Array(ROW_LIGHTS[r]).fill('<div class="md on"></div>').join('')}</div>
       <div class="rc-footer">
         <span class="rc-label">Tap to control</span>
         <span class="rc-arrow">›</span>
@@ -979,10 +1044,12 @@ function buildRowsGrid(){
 /* ── BUILD LIGHTS ── */
 function buildLightsGrid(r){
   const c=document.getElementById('lightsGrid'); c.innerHTML='';
-  for(let l=0;l<LIGHTS;l++){
+  for(let l=0;l<ROW_LIGHTS[r];l++){
     const on=grid[r][l];
+    const isSamudra=(r===5&&(l===4||l===5));
     const el=document.createElement('div');
-    el.className='light-card'+(on?' on':''); el.id='lc-'+r+'-'+l;
+    el.className='light-card'+(on?' on':'')+(isSamudra?' samudra-light':'');
+    el.id='lc-'+r+'-'+l;
     el.innerHTML=`
       <div class="fixture">
         <div class="lc-pipe"></div>
@@ -996,7 +1063,7 @@ function buildLightsGrid(r){
         </div>
       </div>
       <div class="lc-beam"></div>
-      <div class="lc-name">LIGHT ${l+1}</div>
+      <div class="lc-name">LIGHT ${l+1}${isSamudra?'<span class="samudra-badge">SAMUDRA</span>':''}</div>
       <div class="lc-state-row">
         <div class="lc-dot"></div>
         <button class="lc-toggle">${on?'ON':'OFF'}</button>
@@ -1008,19 +1075,20 @@ function buildLightsGrid(r){
 
 /* ── APPLY GRID ── */
 function applyGrid(){
+  const TOTAL_LIGHTS=ROW_LIGHTS.reduce((a,b)=>a+b,0);
   let totalOn=0, rowsActive=0;
   for(let r=0;r<ROWS;r++){
     let rowOn=0;
-    for(let l=0;l<LIGHTS;l++) if(grid[r][l]) rowOn++;
+    for(let l=0;l<ROW_LIGHTS[r];l++) if(grid[r][l]) rowOn++;
     totalOn+=rowOn; if(rowOn>0)rowsActive++;
     const md=document.getElementById('mdots-'+r);
     if(md) md.querySelectorAll('.md').forEach((d,l)=>d.classList.toggle('on',grid[r][l]));
     const rcc=document.getElementById('rcc-'+r);
-    if(rcc) rcc.textContent=rowOn+'/6 ON';
+    if(rcc) rcc.textContent=rowOn+'/'+ROW_LIGHTS[r]+' ON';
     const rc=document.getElementById('rc-'+r);
     if(rc) rc.classList.toggle('lit',rowOn>0);
     if(!pgDetail.classList.contains('gone')&&currentRow===r){
-      for(let l=0;l<LIGHTS;l++){
+      for(let l=0;l<ROW_LIGHTS[r];l++){
         const lc=document.getElementById('lc-'+r+'-'+l);
         if(lc){
           lc.classList.toggle('on',grid[r][l]);
@@ -1035,7 +1103,7 @@ function applyGrid(){
   const elOff=document.getElementById('statOff');
   const elRows=document.getElementById('statRows');
   if(elOn) elOn.textContent=totalOn;
-  if(elOff) elOff.textContent=36-totalOn;
+  if(elOff) elOff.textContent=TOTAL_LIGHTS-totalOn;
   if(elRows) elRows.textContent=rowsActive;
 }
 
@@ -1044,7 +1112,7 @@ function updateRowStats(r){
   const elOn=document.getElementById('rs-on');
   const elOff=document.getElementById('rs-off');
   if(elOn) elOn.textContent=on;
-  if(elOff) elOff.textContent=LIGHTS-on;
+  if(elOff) elOff.textContent=ROW_LIGHTS[r]-on;
 }
 
 /* ── MQTT DOT ── */
@@ -1056,12 +1124,22 @@ function setMqtt(ok){
 /* ── API ── */
 async function apiPost(url,body){
   const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-  if(!res.ok) throw new Error('HTTP '+res.status);
+  if(!res.ok){
+    const err=await res.json(); // ADD THIS LINE
+    console.error('[400 detail]', err, 'body sent:', body); // ADD THIS LINE
+    throw new Error('HTTP '+res.status);
+  }
   return res.json();
 }
+
 function applyResp(d){
   if(!d?.grid)return;
-  for(let r=0;r<ROWS;r++) for(let l=0;l<LIGHTS;l++) grid[r][l]=d.grid[r][l];
+  for(let r=0;r<ROWS;r++){
+    for(let l=0;l<ROW_LIGHTS[r];l++){
+      if(d.grid[r] && d.grid[r][l] !== undefined)
+        grid[r][l]=d.grid[r][l];
+    }
+  }
   setMqtt(d.mqtt); applyGrid();
 }
 
@@ -1071,9 +1149,14 @@ async function toggleLight(r,l){
   if(lc)lc.classList.add('busy');
   busy=true;
   try{ applyResp(await apiPost('/api/light',{row:r,light:l,state:!grid[r][l]})); }
-  catch(e){ console.error(e); setMqtt(false); }
+  catch(e){
+    console.error(e);
+    // only show offline for network errors, not bad request
+    if(!e.message.includes('400')) setMqtt(false);
+  }
   finally{ if(lc)lc.classList.remove('busy'); busy=false; }
 }
+
 async function setRow(r,s){
   if(busy)return; setBusy(true);
   try{ applyResp(await apiPost('/api/row',{row:r,state:s})); }
@@ -1166,12 +1249,12 @@ function parseVoiceCmd(text){
   if(rowNum!==null && lightNum!==null){
     const r=rowNum-1, l=lightNum-1;
     if(r<0||r>5){vcShowResult(false,'Row must be R1–R6. Heard: R'+rowNum); return null;}
-    if(l<0||l>5){vcShowResult(false,'Light must be L1–L6. Heard: L'+lightNum); return null;}
+    if(l<0||l>=ROW_LIGHTS[r]){vcShowResult(false,'Light must be L1–L'+ROW_LIGHTS[r]+'. Heard: L'+lightNum); return null;}
     return{type:'light', row:r, light:l, state};
   }
   if(lightNum!==null && rowNum===null){
     const l=lightNum-1;
-    if(l<0||l>5){vcShowResult(false,'Light must be L1–L6. Heard: L'+lightNum); return null;}
+    if(l<0||l>=ROW_LIGHTS[currentRow]){vcShowResult(false,'Light must be L1–L'+ROW_LIGHTS[currentRow]+'. Heard: L'+lightNum); return null;}
     if(pgDetail.classList.contains('gone')){
       vcShowResult(false,'Include the row — e.g. "R2 L3 ON"');
       return null;
